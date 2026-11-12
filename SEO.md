@@ -2,28 +2,16 @@
 
 Already in `index.html`: title, meta description, robots, Open Graph and Twitter tags, JSON-LD (`WebApplication`), inline favicon, per-room page titles, a `<noscript>` fallback, one `<h1>` per room, valid language attribute.
 
-## To add once the domain is live (replace `https://YOUR-DOMAIN`)
+## Domain setup (templeclarity.com)
 
-In `<head>`:
+Done in the repo: canonical URL, Open Graph and Twitter image (`og-image.png`, 1200x630), `sitemap.xml`, and the `Sitemap:` line in `robots.txt`. When you deploy, serve `index.html`, `og-image.png`, `robots.txt` and `sitemap.xml` from the site root.
 
-```html
-<link rel="canonical" href="https://YOUR-DOMAIN/">
-<meta property="og:url" content="https://YOUR-DOMAIN/">
-<meta property="og:image" content="https://YOUR-DOMAIN/og-image.png">  <!-- 1200x630 -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://YOUR-DOMAIN/og-image.png">
-```
+Then:
 
-`sitemap.xml`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://YOUR-DOMAIN/</loc></url>
-</urlset>
-```
-
-Add `Sitemap: https://YOUR-DOMAIN/sitemap.xml` to `robots.txt`, then submit the sitemap in Google Search Console and Bing Webmaster Tools.
+1. Redirect `www.templeclarity.com` to `templeclarity.com` (or the reverse) so there is only one version of the site.
+2. Serve everything over HTTPS and redirect HTTP to HTTPS.
+3. Add the site to Google Search Console and Bing Webmaster Tools, and submit `https://templeclarity.com/sitemap.xml`.
+4. Check link previews with the Facebook Sharing Debugger and the LinkedIn Post Inspector.
 
 ## Limitation: hash routes
 
