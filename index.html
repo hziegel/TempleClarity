@@ -109,8 +109,9 @@ p{margin:0 0 14px;color:var(--soft)}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 h1:focus{outline:none}
 .auth-alt a{display:inline-block;padding:4px 6px}
+.toast a{color:#cefbf4;text-decoration:underline;white-space:nowrap}
 .toast:empty{opacity:0;padding:0;border-width:0;pointer-events:none}
-.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);transform:translateX(-50%);z-index:5;max-width:90vw;padding:10px 20px;background:rgba(10,16,12,.95);border:2px solid rgba(206,251,244,.45);border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.5);color:var(--ink);text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);transform:translateX(-50%);z-index:5;width:max-content;max-width:min(90vw,420px);padding:10px 20px;background:rgba(10,16,12,.95);border:2px solid rgba(206,251,244,.45);border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.5);color:var(--ink);text-align:center}
 .terms-date{margin:4px 0 0;font-style:italic}
 .terms{text-align:left}
 .terms h2{font-weight:400;font-size:1.3rem;line-height:1.25;margin:24px 0 8px;color:#cefbf4}
@@ -464,9 +465,10 @@ document.querySelectorAll(".pick").forEach(b => b.onclick = () => {
 });
 
 // ---------------------------------------------------------------
-// PLACEHOLDER recommender. Swap getRecommendation() for a call to your
+// PLACEHOLDER recommender. Swap getRankedActivities() for a call to your
 // real recommender / database when they are ready. It receives the chosen
-// emotion and time bucket and should return { id, title, description, minutes }.
+// emotion and time bucket and should return an array of activities
+// ({ id, title, description, minutes }) in ranked order, best first.
 // ---------------------------------------------------------------
 const ACTIVITIES = [
   { id: 1,  bucket: "short",  minutes: 5,  genres: ["Mindful/Meditative","Distress Tolerance"], emotions: ["Nervous","Scared","Mad","Calm"], title: "Box breathing", description: "Breathe in for four counts, hold for four, out for four, hold for four. Repeat a few times, slowly." },
@@ -488,13 +490,23 @@ const ACTIVITIES = [
 ];
 const GENRES = ["Mindful/Meditative","Distress Tolerance","Drawing","Crafting","Writing","Reading","Activity Sheet","Vocal","Auditory","Sensory","Movement","Silly","Productive","Game","Food","Social"];
 let seenIdeas = [];
-async function getRecommendation(emotion, bucket, seen) {
+// Ordered queue so "Try another" never repeats until every option has been shown.
+let ideaQueue = [], ideaLast = null;
+// Swap point for the real recommender: return the matching activities
+// in ranked order (best first). The queue below shows them in that order.
+function getRankedActivities(emotion, bucket) {
   const pool = bucket ? ACTIVITIES.filter(a => a.bucket === bucket) : ACTIVITIES;
   const tagged = emotion ? pool.filter(a => a.emotions.includes(emotion)) : [];
-  const base = tagged.length ? tagged : pool;
-  const fresh = base.filter(a => !seen.includes(a.id));
-  const list = fresh.length ? fresh : base;
-  return list[Math.floor(Math.random() * list.length)];
+  return tagged.length ? tagged : pool;
+}
+function nextFromQueue(emotion, bucket) {
+  if (!ideaQueue.length) {
+    const q = getRankedActivities(emotion, bucket).slice();
+    // Start the next cycle after the activity just shown, keeping ranked order.
+    const k = q.findIndex(a => a.id === ideaLast);
+    ideaQueue = k >= 0 ? q.slice(k + 1).concat(q.slice(0, k + 1)) : q;
+  }
+  return ideaQueue.shift();
 }
 let currentIdea = null;
 function fillActivity(a) {
@@ -513,17 +525,18 @@ function showActivityById(id) {
   const a = ACTIVITIES.find(x => x.id === id);
   if (!a) return false;
   seenIdeas = [a.id];
+  ideaLast = a.id; ideaQueue = [];
   setContext("");
   fillActivity(a);
   return true;
 }
 async function renderIdea(reset) {
-  if (reset) seenIdeas = [];
+  if (reset) { seenIdeas = []; ideaQueue = []; ideaLast = null; }
   const flow = !!(chosenEmotion && chosenTime);
   setContext(flow ? "Feeling " + chosenEmotion.toLowerCase() + ", with " + chosenTimeLabel + "." : "");
-  const a = await getRecommendation(flow ? chosenEmotion : null, flow ? chosenTime : null, seenIdeas);
+  const a = nextFromQueue(flow ? chosenEmotion : null, flow ? chosenTime : null);
   if (!a) return;
-  seenIdeas.push(a.id);
+  seenIdeas.push(a.id); ideaLast = a.id;
   fillActivity(a);
   try { history.replaceState(null, "", "#activity-" + a.id); } catch (e) {}
 }
@@ -573,8 +586,9 @@ function playVoidSound(){
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
+    if (audioCtx && audioCtx.state === "closed") audioCtx = null;
     audioCtx = audioCtx || new AC();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    if (audioCtx.state !== "running") audioCtx.resume().catch(() => {});
     const t = audioCtx.currentTime;
     const master = audioCtx.createGain();
     master.gain.setValueAtTime(0.0001, t);
@@ -604,8 +618,9 @@ function playClick(){
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
+    if (audioCtx && audioCtx.state === "closed") audioCtx = null;
     audioCtx = audioCtx || new AC();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    if (audioCtx.state !== "running") audioCtx.resume().catch(() => {});
     const ctx = audioCtx, t = ctx.currentTime;
     if (t < clickUntil) return;
     clickUntil = t + 0.08;
@@ -691,9 +706,9 @@ function setReaction(patch) {
   renderReactions();
 }
 const cur = () => reactions[currentIdea] || {};
-document.getElementById("fav").onclick = () => setReaction({ fav: !cur().fav });
-document.getElementById("up").onclick = () => setReaction({ vote: cur().vote === "up" ? null : "up" });
-document.getElementById("down").onclick = () => setReaction({ vote: cur().vote === "down" ? null : "down" });
+document.getElementById("fav").onclick = () => { nudgeLogin(); setReaction({ fav: !cur().fav }); };
+document.getElementById("up").onclick = () => { nudgeLogin(); setReaction({ vote: cur().vote === "up" ? null : "up" }); };
+document.getElementById("down").onclick = () => { nudgeLogin(); setReaction({ vote: cur().vote === "down" ? null : "down" }); };
 function readNum(id) {
   const v = document.getElementById(id).value.trim();
   if (v === "") return null;
@@ -822,11 +837,21 @@ async function sessionRequest() { return null; }
 async function logoutRequest() { /* nothing to end yet: there is no server session */ }
 let currentUser = null;
 let toastTimer = null;
-function toast(text) {
+function toast(text, link) {
   const el = document.getElementById("toast");
   el.textContent = text;
+  if (link) {
+    el.appendChild(document.createTextNode(" "));
+    const a = document.createElement("a");
+    a.href = link.href; a.textContent = link.text;
+    a.addEventListener("click", () => { el.textContent = ""; });
+    el.appendChild(a);
+  }
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.textContent = ""; }, 3200);
+  toastTimer = setTimeout(() => { el.textContent = ""; }, link ? 8000 : 3200);
+}
+function nudgeLogin() {
+  if (!currentUser) toast("Your response will not be saved unless you log in or create an account.", { text: "Log in", href: "#login" });
 }
 function updateAuthUI() {
   const a = document.getElementById("menuAuth");
