@@ -7,6 +7,8 @@ By Heron of [Simply Joyful Designs](mailto:mail@simplyjoyfuldesigns.com).
 ## What's here
 
 - `index.html` is the whole front end in one self-contained file (background image embedded). Open it in a browser to run it.
+- `CHANGELOG.md` lists what changed and when.
+- `SEO.md` has notes on search and link previews.
 
 ## Status
 
