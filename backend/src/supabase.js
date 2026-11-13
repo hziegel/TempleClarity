@@ -18,7 +18,7 @@ export function createSupabase({ supabaseUrl, supabaseAnonKey, supabaseServiceKe
     if (!res.ok) throw new Error(`Supabase auth returned ${res.status}`);
     const u = await res.json();
     if (!u || !u.id) return null;
-    const user = { id: u.id, email: u.email || null };
+    const user = { id: u.id, email: u.email || null, emailConfirmedAt: u.email_confirmed_at || u.confirmed_at || null };
     cache.set(key, { user, expires: Date.now() + TTL_MS });
     if (cache.size > 1000) for (const k of cache.keys()) { cache.delete(k); if (cache.size <= 500) break; }
     return user;

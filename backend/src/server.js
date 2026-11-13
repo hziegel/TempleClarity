@@ -47,9 +47,22 @@ export function rankActivities(pool, emotion) {
   return tagged.length ? tagged : pool;
 }
 
+// The front end's time choices, in minutes. An activity matches a choice when its
+// min_time-max_time range overlaps it.
+const BUCKETS = { short: [0, 15], medium: [15, 45], long: [45, 1e9] };
+
 const toActivity = (r) => ({
-  id: r.id, bucket: r.bucket, minutes: r.minutes, title: r.title,
-  description: r.description, genres: r.genres, emotions: r.emotions,
+  id: r.id,
+  title: r.title,
+  description: r.description,
+  minMinutes: r.min_minutes,
+  maxMinutes: r.max_minutes,
+  minutes: r.max_minutes ?? r.min_minutes,   // the single number the cards show
+  screenOnly: !!r.screen_only,
+  groupOnly: !!r.group_only,
+  requiresSupplies: !!r.requires_supplies,
+  genres: r.genres,
+  emotions: r.emotions,
 });
 
 export function createServer({ db, supabase, config }) {
@@ -96,6 +109,27 @@ export function createServer({ db, supabase, config }) {
     return user;
   }
 
+  // Finds the users row for a Supabase user, creating it (with its profile) on first sign-in.
+  async function localUserId(user) {
+    const found = await db.query(Q.userIdBySupabase, [user.id]);
+    if (found.rows.length) return found.rows[0].user_id;
+    if (!user.email) throw new ApiError(400, "This account has no email address.");
+    return db.tx(async (q) => {
+      await q(Q.lockText, [user.id]);                      // two first requests at once: one waits
+      const again = await q(Q.userIdBySupabase, [user.id]);
+      if (again.rows.length) return again.rows[0].user_id;
+      const id = (await q(Q.userNextId)).rows[0].id;
+      await q(Q.profileInsert, [id]);
+      await q(Q.userInsert, [id, user.email, user.emailConfirmedAt || null]);
+      await q(Q.supabaseLinkInsert, [user.id, id]);
+      return id;
+    });
+  }
+  async function requireLocalUser(req) {
+    const user = await requireUser(req);
+    return { ...user, localId: await localUserId(user) };
+  }
+
   const intParam = (s) => {
     const n = Number(s);
     if (!Number.isInteger(n) || n < 1 || n > 2147483647) throw new ApiError(400, "Invalid id.");
@@ -109,79 +143,115 @@ export function createServer({ db, supabase, config }) {
 
   route("GET", "/api/activities", async ({ url }) => {
     const bucket = url.searchParams.get("bucket");
-    const emotion = url.searchParams.get("emotion");
-    if (bucket && !["short", "medium", "long"].includes(bucket)) throw new ApiError(400, "Invalid bucket.");
-    const { rows } = await db.query(Q.activitiesByBucket, [bucket || null]);
+    const emotion = url.searchParams.get("emotion") || null;
+    if (bucket && !BUCKETS[bucket]) throw new ApiError(400, "Invalid bucket.");
+    const [lo, hi] = bucket ? BUCKETS[bucket] : [null, null];
+    const { rows } = await db.query(Q.activitiesList, [emotion, lo, hi]);
     return { status: 200, body: { activities: rankActivities(rows.map(toActivity), emotion) } };
   });
 
   route("GET", "/api/activities/(\\d+)", async ({ match }) => {
-    const { rows } = await db.query(Q.activityById, [intParam(match[1])]);
+    const { rows } = await db.query(Q.activityById, [null, intParam(match[1])]);
     if (!rows.length) throw new ApiError(404, "Activity not found.");
     return { status: 200, body: { activity: toActivity(rows[0]) } };
   });
 
   // Always 200: { user } when the token is valid, { user: null } otherwise.
+  // The first valid sign-in also creates the person's row in users.
   route("GET", "/api/session", async ({ req }) => {
-    try { return { status: 200, body: { user: await requireUser(req) } }; }
+    let user;
+    try { user = await requireLocalUser(req); }
     catch (e) { if (e.status === 401) return { status: 200, body: { user: null } }; throw e; }
+    await db.query(Q.userTouch, [user.localId, user.email, user.emailConfirmedAt || null]);
+    return { status: 200, body: { user: { id: user.localId, email: user.email } } };
+  });
+
+  route("GET", "/api/profile", async ({ req }) => {
+    const user = await requireLocalUser(req);
+    const row = (await db.query(Q.profileGet, [user.localId])).rows[0] || {};
+    return { status: 200, body: { profile: { backgroundArt: row.background_art ?? 1, musicOn: row.music_on ?? true, country: row.country ?? null } } };
+  });
+
+  route("PUT", "/api/profile", async ({ req }) => {
+    const user = await requireLocalUser(req);
+    const b = await readJson(req);
+    const has = (k) => k in b;
+    if (!has("backgroundArt") && !has("musicOn") && !has("country")) throw new ApiError(400, "Send backgroundArt, musicOn and/or country.");
+    if (has("backgroundArt") && !(Number.isInteger(b.backgroundArt) && b.backgroundArt >= 1 && b.backgroundArt <= 1000)) throw new ApiError(400, "backgroundArt must be a whole number.");
+    if (has("musicOn") && typeof b.musicOn !== "boolean") throw new ApiError(400, "musicOn must be true or false.");
+    if (has("country") && !(b.country === null || /^[A-Za-z]{2}$/.test(b.country))) throw new ApiError(400, "country must be a two-letter code or null.");
+    const row = (await db.query(Q.profileUpdate, [
+      user.localId,
+      has("backgroundArt"), has("backgroundArt") ? b.backgroundArt : null,
+      has("musicOn"), has("musicOn") ? b.musicOn : null,
+      has("country"), has("country") && b.country ? b.country.toUpperCase() : null,
+    ])).rows[0];
+    return { status: 200, body: { profile: { backgroundArt: row.background_art, musicOn: row.music_on, country: row.country } } };
   });
 
   route("GET", "/api/reactions", async ({ req }) => {
-    const user = await requireUser(req);
-    const { rows } = await db.query(Q.reactionsForUser, [user.id]);
+    const user = await requireLocalUser(req);
+    const { rows } = await db.query(Q.reactionsForUser, [user.localId]);
     const reactions = {};
-    for (const r of rows) reactions[r.activity_id] = { fav: r.fav, vote: r.vote };
+    for (const r of rows) {
+      const cur = reactions[r.activity_id] || { fav: false, vote: null };
+      reactions[r.activity_id] = { fav: cur.fav || r.fav, vote: r.vote || cur.vote };
+    }
     return { status: 200, body: { reactions } };
   });
 
   route("PUT", "/api/reactions/(\\d+)", async ({ req, match }) => {
-    const user = await requireUser(req);
+    const user = await requireLocalUser(req);
     const activityId = intParam(match[1]);
     const body = await readJson(req);
     const hasFav = "fav" in body, hasVote = "vote" in body;
     if (!hasFav && !hasVote) throw new ApiError(400, "Send fav and/or vote.");
     if (hasFav && typeof body.fav !== "boolean") throw new ApiError(400, "fav must be true or false.");
     if (hasVote && ![null, "up", "down"].includes(body.vote)) throw new ApiError(400, 'vote must be "up", "down" or null.');
-    const found = await db.query(Q.activityById, [activityId]);
+    const found = await db.query(Q.activityById, [null, activityId]);
     if (!found.rows.length) throw new ApiError(404, "Activity not found.");
     const result = await db.tx(async (q) => {
-      const cur = (await q(Q.reactionForUpdate, [user.id, activityId])).rows[0] || { fav: false, vote: null };
-      const fav = hasFav ? body.fav : cur.fav;
-      const vote = hasVote ? body.vote : cur.vote;
-      if (!fav && !vote) await q(Q.reactionDelete, [user.id, activityId]);
-      else await q(Q.reactionUpsert, [user.id, activityId, fav, vote]);
-      return { fav, vote };
+      await q(Q.lockUser, [user.localId]);               // this person's changes happen one at a time
+      const ids = [user.localId, activityId];
+      if (hasFav) await q(body.fav ? Q.favInsert : Q.favDelete, ids);
+      if (hasVote) {
+        await q(Q.upDelete, ids); await q(Q.downDelete, ids);   // a person has one vote per activity
+        if (body.vote === "up") await q(Q.upInsert, ids);
+        if (body.vote === "down") await q(Q.downInsert, ids);
+      }
+      const st = (await q(Q.reactionState, ids)).rows[0];
+      return { fav: !!st.fav, vote: st.vote || null };
     });
     return { status: 200, body: { reaction: result } };
   });
 
   route("POST", "/api/terms-acceptance", async ({ req }) => {
-    const user = await requireUser(req);
+    const user = await requireLocalUser(req);
     const { version } = await readJson(req);
-    if (typeof version !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(version)) throw new ApiError(400, "Invalid terms version.");
-    await db.query(Q.termsInsert, [user.id, version]);
+    if (typeof version !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(version) || Number.isNaN(Date.parse(version))) throw new ApiError(400, "Invalid terms version.");
+    await db.query(Q.termsAccept, [user.localId, version]);
     return { status: 204 };
   });
 
   route("DELETE", "/api/account", async ({ req }) => {
-    const user = await requireUser(req);
+    const user = await requireLocalUser(req);
     limit(`del:${user.id}`, 5, 60 * 60_000);
     const { password } = await readJson(req);
     if (typeof password !== "string" || !password) throw new ApiError(400, "Enter your password to confirm.");
-    if (!user.email) throw new ApiError(400, "This account can't be confirmed with a password.");
     let ok;
     try { ok = await supabase.verifyPassword(user.email, password); }
     catch (e) { console.error("[account] password check failed:", e.message); throw new ApiError(502, "Sign-in service is unavailable. Try again."); }
     if (!ok) throw new ApiError(403, "That password isn't right.");
     await db.tx(async (q) => {
-      await q(Q.userReactionsDelete, [user.id]);
-      await q(Q.userTermsDelete, [user.id]);
+      await q(Q.lockUser, [user.localId]);
+      for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents]) await q(sql, [user.localId]);
+      await q(Q.deleteUser, [user.localId]);              // must come before the profile, which users points at
+      await q(Q.deleteProfile, [user.localId]);
     });
     try { await supabase.deleteUser(user.id); }
     catch (e) {
       console.error("[account] auth delete failed:", e.message);
-      throw new ApiError(502, "Your saved data was removed, but the account itself couldn't be. Please try again.");
+      throw new ApiError(502, "Your saved data was removed, but the sign-in record couldn't be. Please try again.");
     }
     return { status: 204 };
   });

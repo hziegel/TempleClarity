@@ -5,7 +5,7 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 ## [Unreleased]
 
 ### Added
-- **Backend (`backend/`):** a small Node.js API using Postgres for data and Supabase for sign-in. Includes the database schema, the 16 starting activities, endpoints for activities, session, favorites/votes, terms acceptance, account deletion and the error log, plus tests. The front end is not wired to it yet. See `backend/README.md`.
+- **Backend (`backend/`):** a small Node.js API using Postgres for data and Supabase for sign-in. Uses your `schema.sql` as-is, plus `schema_additions.sql` (Supabase link and error log tables), seed data for the 16 starting activities, endpoints for activities, session, profile, favorites/votes, terms acceptance, account deletion and the error log, and tests. The front end is not wired to it yet. See `backend/README.md`.
 
 Waiting on the backend: real sign-up, login, session, account deletion and error-log endpoints, plus the recommender and activity database. The front end already calls placeholder functions for each of them (`authRequest`, `sessionRequest`, `logoutRequest`, `deleteAccountRequest`, `getRankedActivities`, `ERROR_LOG_ENDPOINT`).
 

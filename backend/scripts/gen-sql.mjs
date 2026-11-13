@@ -1,43 +1,77 @@
-// Prints a psql script that runs each query in src/queries.js with real bound parameters.
+// Prints a psql script that runs every query in src/queries.js with real bound parameters
+// against a database that already has schema.sql, schema_additions.sql and seed.sql.
 import { Q } from "../src/queries.js";
-const U = process.argv[2];
+const SB = process.argv[2];                  // a Supabase-style uuid
 const one = (s) => s.replace(/\s+/g, " ").trim();
 const lines = [];
-const add = (q, params = []) => {
-  lines.push(one(q));
-  if (params.length) lines.push("\\bind " + params.map((p) => `'${p}'`).join(" "));
-  lines.push(";");
+// Params that start with ":" are psql variables (left unquoted); everything else is a quoted string.
+const arg = (p) => (p.startsWith(":") ? p : `'${p}'`);
+const run = (sql, params = [], after = "\\g") => {
+  lines.push(one(sql));
+  if (params.length) lines.push("\\bind " + params.map(arg).join(" ") + " " + after);
+  else lines.push(after === "\\g" ? ";" : after);
 };
-// Division by a volatile zero only fails when the check is false (1/0 alone is folded at plan time).
-const check = (sql) => lines.push(`SELECT CASE WHEN (${sql}) THEN 1 ELSE 1/(random()*0)::int END AS ok;`);
+const out = (sql, params, name) => run(sql, params, `\\gset ${name}_`);
+// 1/0 alone is folded at plan time, so divide by a volatile zero: it only fails when the check is false.
+const check = (label, cond) => lines.push(`SELECT CASE WHEN (${cond}) THEN 1 ELSE 1/(random()*0)::int END AS "${label}";`);
 
-add(Q.activitiesByBucket, ["short"]);
-add(Q.activityById, ["1"]);
-check("SELECT count(*) = 16 FROM activities");
-check("SELECT count(*) > 0 FROM activities WHERE bucket = 'short'");
+// ---- activities --------------------------------------------------------------------------
+const count = (sql) => `SELECT count(*) AS n FROM (${sql}) t`;
+// (psql cannot bind NULL, so these use real values; the NULL paths are exercised by the API tests)
+out(count(Q.activitiesList), ["Nervous", "0", "15"], "short");
+check("short activities", ":short_n = 8");
+out(count(Q.activitiesList), ["Nervous", "15", "45"], "medium");
+check("medium activities", ":medium_n = 5");
+out(count(Q.activitiesList), ["Nervous", "45", "1000000000"], "long");
+check("long activities", ":long_n = 3");
+run(Q.activityById, ["Calm", "1"]);
+check("seed has 16 activities, 16 genres, 8 emotions", "(SELECT count(*) FROM activities) = 16 AND (SELECT count(*) FROM genres) = 16 AND (SELECT count(*) FROM emotions) = 8");
+check("emotion sorting puts the best score first", "(SELECT id FROM (" + one(Q.activitiesList).replace(/\$1/g, "'Nervous'").replace(/\$2::float8/g, "0::float8").replace(/\$3::float8/g, "1e9::float8") + ") t LIMIT 1) = 1");
 
-// Reactions: insert, update, then clear (psql cannot bind NULL; a vote-less favorite is checked in sql.sh)
-add(Q.reactionForUpdate, [U, "1"]);
-add(Q.reactionUpsert, [U, "1", "false", "down"]);
-add(Q.reactionUpsert, [U, "1", "true", "up"]);
-add(Q.reactionsForUser, [U]);
-check(`SELECT fav AND vote = 'up' FROM reactions WHERE user_id = '${U}' AND activity_id = 1`);
-add(Q.reactionDelete, [U, "1"]);
-check(`SELECT count(*) = 0 FROM reactions WHERE user_id = '${U}'`);
+// ---- first sign-in creates a user, a profile and the link ---------------------------------
+run(Q.userIdBySupabase, [SB]);
+run(Q.lockText, [SB]);
+out(Q.userNextId, [], "u");
+run(Q.profileInsert, [":u_id"]);
+run(Q.userInsert, [":u_id", "heron@example.com", "2026-11-13T10:00:00Z"]);
+run(Q.supabaseLinkInsert, [SB, ":u_id"]);
+out(Q.userIdBySupabase, [SB], "found");
+check("user linked to supabase id", ":found_user_id = :u_id");
+run(Q.userTouch, [":u_id", "heron.new@example.com", "2026-11-13T10:00:00Z"]);
+check("user touched", `(SELECT email = 'heron.new@example.com' AND last_seen_at IS NOT NULL AND password_hash = '!supabase' FROM users WHERE id = :u_id)`);
+run(Q.termsAccept, [":u_id", "2026-11-11"]);
+check("terms recorded", `(SELECT terms_accepted AND terms_version = DATE '2026-11-11' FROM users WHERE id = :u_id)`);
+run(Q.profileGet, [":u_id"]);
+run(Q.profileUpdate, [":u_id", "true", "2", "true", "false", "true", "US"]);
+check("profile updated", `(SELECT background_art = 2 AND music_on = false AND country = 'US' FROM user_profiles WHERE user_id = :u_id)`);
+run(Q.profileUpdate, [":u_id", "false", "0", "false", "true", "false", "XX"]);   // untouched fields stay
+check("profile partial update keeps other fields", `(SELECT background_art = 2 AND music_on = false AND country = 'US' FROM user_profiles WHERE user_id = :u_id)`);
 
-// Terms: a repeat is a no-op
-add(Q.termsInsert, [U, "2026-11-11"]);
-add(Q.termsInsert, [U, "2026-11-11"]);
-check(`SELECT count(*) = 1 FROM terms_acceptances WHERE user_id = '${U}'`);
+// ---- favorites and votes -------------------------------------------------------------------
+run(Q.lockUser, [":u_id"]);
+run(Q.favInsert, [":u_id", "1"]);
+run(Q.favInsert, [":u_id", "1"]);                             // twice: still one row
+check("favorite stored once", `(SELECT count(*) = 1 FROM favorites WHERE user_id = :u_id)`);
+run(Q.upInsert, [":u_id", "1"]);
+run(Q.downInsert, [":u_id", "2"]);
+run(Q.reactionsForUser, [":u_id"]);
+run(Q.reactionState, [":u_id", "1"]);
+out(Q.reactionState, [":u_id", "1"], "st");
+check("state is favorite + up", `:'st_fav' = 't' AND :'st_vote' = 'up'`);
+run(Q.upDelete, [":u_id", "1"]);
+run(Q.downDelete, [":u_id", "1"]);
+run(Q.favDelete, [":u_id", "1"]);
+check("activity 1 cleared, activity 2 still downvoted", `(SELECT count(*) = 0 FROM favorites WHERE user_id = :u_id) AND (SELECT count(*) = 0 FROM upvotes WHERE user_id = :u_id) AND (SELECT count(*) = 1 FROM downvotes WHERE user_id = :u_id)`);
 
-// Error log
-add(Q.errorLogInsert, ["warn", "audio", "boom", '{"line":3}', "", "emotion-cards", "2", "2026-11-12T10:00:00Z"]);
-check("SELECT count(*) = 1 FROM error_logs WHERE source = 'audio' AND context->>'line' = '3' AND count = 2");
+// ---- error log -----------------------------------------------------------------------------
+run(Q.errorLogInsert, ["warn", "audio", "boom", '{"line":3}', "", "emotion-cards", "2", "2026-11-12T10:00:00Z"]);
+check("error logged", "(SELECT count(*) = 1 FROM error_logs WHERE source = 'audio' AND context->>'line' = '3' AND count = 2)");
 
-// Account deletion
-add(Q.reactionUpsert, [U, "2", "false", "down"]);
-add(Q.userReactionsDelete, [U]);
-add(Q.userTermsDelete, [U]);
-check(`SELECT (SELECT count(*) FROM reactions WHERE user_id = '${U}') + (SELECT count(*) FROM terms_acceptances WHERE user_id = '${U}') = 0`);
-
+// ---- account deletion (order matters because of the foreign keys) -------------------------
+run(Q.favInsert, [":u_id", "3"]);
+run(Q.upInsert, [":u_id", "3"]);
+for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents]) run(sql, [":u_id"]);
+run(Q.deleteUser, [":u_id"]);
+run(Q.deleteProfile, [":u_id"]);
+check("everything about the user is gone", `(SELECT count(*) = 0 FROM users WHERE id = :u_id) AND (SELECT count(*) = 0 FROM user_profiles WHERE user_id = :u_id) AND (SELECT count(*) = 0 FROM supabase_users WHERE supabase_user_id = '${SB}') AND (SELECT count(*) = 0 FROM favorites WHERE user_id = :u_id) AND (SELECT count(*) = 0 FROM downvotes WHERE user_id = :u_id)`);
 console.log(lines.join("\n"));

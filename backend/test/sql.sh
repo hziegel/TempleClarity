@@ -1,21 +1,24 @@
 #!/bin/sh
-# Checks schema.sql, seed.sql and every query in src/queries.js against a real Postgres.
-# Usage: DATABASE_URL=postgresql://... npm run test:sql   (needs psql; use a scratch database)
+# Checks schema.sql, schema_additions.sql, seed.sql and every query in src/queries.js against a real Postgres.
+# Usage: DATABASE_URL=postgresql://... npm run test:sql
+# Use an EMPTY scratch database: schema.sql can only be loaded once into a database.
 set -e
-: "${DATABASE_URL:?Set DATABASE_URL to a scratch database}"
+: "${DATABASE_URL:?Set DATABASE_URL to an empty scratch database}"
 cd "$(dirname "$0")/.."
 P="psql $DATABASE_URL -v ON_ERROR_STOP=1 -q -X"
 
-# Schema and seed twice: they must be safe to re-run.
-$P -f schema.sql -f schema.sql -f seed.sql -f seed.sql
+$P -f schema.sql -f schema_additions.sql
+$P -f seed.sql
+COUNTS=$($P -Atc "SELECT (SELECT count(*) FROM activity_genres) || ',' || (SELECT count(*) FROM activity_emotions)")
+$P -f seed.sql                                  # re-running the seed must not add anything
+[ "$COUNTS" = "$($P -Atc "SELECT (SELECT count(*) FROM activity_genres) || ',' || (SELECT count(*) FROM activity_emotions)")" ] \
+  || { echo "FAIL: running seed.sql twice created duplicates"; exit 1; }
 
-U='11111111-1111-1111-1111-111111111111'
-node scripts/gen-sql.mjs "$U" > /tmp/tc-sql-test.sql
+node scripts/gen-sql.mjs "22222222-2222-2222-2222-222222222222" > /tmp/tc-sql-test.sql
 $P -o /dev/null -f /tmp/tc-sql-test.sql
 
-# Rules the database itself enforces
-if $P -c "INSERT INTO reactions (user_id, activity_id, fav, vote) VALUES ('$U', 1, false, NULL)" 2>/dev/null; then echo "FAIL: empty reaction was accepted"; exit 1; fi
-if $P -c "INSERT INTO activities (id, bucket, minutes, title, description) VALUES (99, 'huge', 5, 'x', 'y')" 2>/dev/null; then echo "FAIL: bad bucket was accepted"; exit 1; fi
-$P -c "INSERT INTO reactions (user_id, activity_id, fav, vote) VALUES ('$U', 3, true, NULL); DELETE FROM reactions WHERE user_id = '$U'"
+# The users table can't be created without a profile row first
+if $P -c "INSERT INTO users (email, password_hash) VALUES ('x@y.co', 'h')" 2>/dev/null; then echo "FAIL: user without a profile was accepted"; exit 1; fi
 $P -c "DELETE FROM error_logs WHERE source = 'audio'"
+rm -f /tmp/tc-sql-test.sql
 echo "SQL checks passed"
