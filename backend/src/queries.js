@@ -37,12 +37,12 @@ export const Q = {
   userIdBySupabase: `SELECT user_id FROM supabase_users WHERE supabase_user_id = $1`,
   lockText: `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
   lockUser: `SELECT pg_advisory_xact_lock($1::bigint)`,
-  userNextId: `SELECT nextval(pg_get_serial_sequence('users', 'id'))::int AS id`,
-  // users.id references user_profiles.user_id, so the profile row has to exist first.
-  profileInsert: `INSERT INTO user_profiles (user_id) VALUES ($1)`,
+  // user_profiles.user_id references users.id, so the user comes first.
   userInsert: `
-    INSERT INTO users (id, email, email_verified_at, password_hash, created_at, updated_at, last_seen_at, account_status)
-    VALUES ($1, $2, $3::timestamp, '!supabase', now(), now(), now(), 'active')`,
+    INSERT INTO users (email, email_verified_at, password_hash, created_at, updated_at, last_seen_at, account_status)
+    VALUES ($1, $2::timestamp, '!supabase', now(), now(), now(), 'active')
+    RETURNING id`,
+  profileInsert: `INSERT INTO user_profiles (user_id) VALUES ($1)`,
   supabaseLinkInsert: `INSERT INTO supabase_users (supabase_user_id, user_id) VALUES ($1, $2)`,
   userTouch: `
     UPDATE users
@@ -73,29 +73,26 @@ export const Q = {
                 WHEN EXISTS (SELECT 1 FROM downvotes WHERE user_id = $1 AND activity_id = $2) THEN 'down'
            END AS vote`,
   favInsert: `
-    INSERT INTO favorites (activity_id, user_id, created_at)
-    SELECT $2::int, $1::int, now()
-    WHERE NOT EXISTS (SELECT 1 FROM favorites WHERE user_id = $1 AND activity_id = $2)`,
+    INSERT INTO favorites (user_id, activity_id, created_at) VALUES ($1, $2, now())
+    ON CONFLICT (user_id, activity_id) DO NOTHING`,
   favDelete: `DELETE FROM favorites WHERE user_id = $1 AND activity_id = $2`,
   upInsert: `
-    INSERT INTO upvotes (activity_id, user_id, created_at)
-    SELECT $2::int, $1::int, now()
-    WHERE NOT EXISTS (SELECT 1 FROM upvotes WHERE user_id = $1 AND activity_id = $2)`,
+    INSERT INTO upvotes (user_id, activity_id, created_at) VALUES ($1, $2, now())
+    ON CONFLICT (user_id, activity_id) DO NOTHING`,
   upDelete: `DELETE FROM upvotes WHERE user_id = $1 AND activity_id = $2`,
   downInsert: `
-    INSERT INTO downvotes (activity_id, user_id, created_at)
-    SELECT $2::int, $1::int, now()
-    WHERE NOT EXISTS (SELECT 1 FROM downvotes WHERE user_id = $1 AND activity_id = $2)`,
+    INSERT INTO downvotes (user_id, activity_id, created_at) VALUES ($1, $2, now())
+    ON CONFLICT (user_id, activity_id) DO NOTHING`,
   downDelete: `DELETE FROM downvotes WHERE user_id = $1 AND activity_id = $2`,
 
-  // ---- account deletion: children first, then users, then the profile users points at ----
+  // ---- account deletion: everything that points at users first, then users itself ----------
   deleteFavorites: `DELETE FROM favorites WHERE user_id = $1`,
   deleteUpvotes: `DELETE FROM upvotes WHERE user_id = $1`,
   deleteDownvotes: `DELETE FROM downvotes WHERE user_id = $1`,
   deleteUserAbilities: `DELETE FROM user_abilities WHERE user_id = $1`,
   deleteSiteEvents: `DELETE FROM site_events WHERE user_id = $1`,
-  deleteUser: `DELETE FROM users WHERE id = $1`,          // also removes the supabase_users link
   deleteProfile: `DELETE FROM user_profiles WHERE user_id = $1`,
+  deleteUser: `DELETE FROM users WHERE id = $1`,          // also removes the supabase_users link
 
   // ---- error log --------------------------------------------------------------------------
   errorLogInsert: `

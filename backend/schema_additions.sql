@@ -24,6 +24,19 @@ CREATE TABLE IF NOT EXISTS error_logs (
 );
 CREATE INDEX IF NOT EXISTS error_logs_received_idx ON error_logs (received_at DESC);
 
+-- schema.sql recreates the public schema, which on Supabase drops its default access
+-- for the built-in roles. Give them back the basic right to see the schema (the tables
+-- themselves stay locked by the row level security below).
+DO $$
+DECLARE r text;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+      EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', r);
+    END IF;
+  END LOOP;
+END $$;
+
 -- On Supabase, tables are reachable through its public REST API by default.
 -- Row level security with no policies blocks that route. This API connects with a
 -- database role that bypasses it, so the API is unaffected.

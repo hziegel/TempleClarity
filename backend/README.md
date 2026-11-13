@@ -16,7 +16,7 @@ browser ──(Supabase JS: sign up / log in)──▶ Supabase Auth
 ## Setup
 
 1. **Supabase:** create a project. Under Authentication, decide whether new users must confirm their email. Under Project Settings → API, copy the project URL, the `anon` key and the `service_role` key.
-2. **Database:** use Supabase's Postgres or your own (for example managed Postgres on Gcore). Start from an **empty** database, then:
+2. **Database:** use Supabase's Postgres or your own (for example managed Postgres on Gcore). Then:
    ```sh
    cd backend
    cp .env.example .env        # fill in the values
@@ -27,7 +27,9 @@ browser ──(Supabase JS: sign up / log in)──▶ Supabase Auth
    ```
 3. Check it: `curl localhost:3000/api/health` → `{"ok":true}`.
 
-`schema.sql` is your file, unchanged, and can only be loaded once into a database. `seed.sql` is safe to run again: it updates activity text but leaves relevance scores and the `published` flag alone.
+> **`schema.sql` starts with `DROP SCHEMA public CASCADE`**, which erases every table in the database's `public` schema. `npm run db:setup` therefore refuses to run on a database that already has tables; add `-- --wipe` (`npm run db:setup -- --wipe`) to confirm you want to erase and rebuild. Never point it at a database holding data you want to keep. If you'd rather not drop the schema, delete the first two lines of `schema.sql`. On Supabase, `schema_additions.sql` gives the built-in roles back access to the recreated schema.
+
+`schema.sql` is your file, unchanged. `seed.sql` is safe to run again: it updates activity text but leaves relevance scores and the `published` flag alone.
 
 ### Database files
 
@@ -41,7 +43,7 @@ browser ──(Supabase JS: sign up / log in)──▶ Supabase Auth
 | --- | --- |
 | `users`, `user_profiles` | A row in each is created the first time someone signs in. `users.password_hash` is set to `'!supabase'` because Supabase owns the real password. `terms_accepted` / `terms_version` are set by `POST /api/terms-acceptance`. `last_seen_at` is updated by `GET /api/session`. |
 | `activities`, `genres`, `activity_genres`, `emotions`, `activity_emotions` | Activity list. Only `published` activities are returned. The `relevance_score` for the chosen emotion orders the results (highest first). |
-| `favorites`, `upvotes`, `downvotes` | Favorites and votes. A person has at most one vote per activity, so choosing a vote removes the other. |
+| `favorites`, `upvotes`, `downvotes` | Favorites and votes. Your unique constraints stop duplicates. A person has at most one vote per activity, so choosing a vote removes the other. |
 | `user_abilities`, `site_events` | Only touched on account deletion, so nothing is left behind. |
 | `more_specific_activities`, `abilities`, `activity_abilities`, `specific_activity_abilities`, `genre_abilities`, `event_types` | Not used yet. |
 
@@ -49,13 +51,11 @@ Time choices on the front end map to your `min_time` / `max_time`: 0-15 min, 15-
 
 ### Things worth a second look in schema.sql
 
-1. **A foreign key looks backwards.** `ALTER TABLE users ADD FOREIGN KEY (id) REFERENCES user_profiles (user_id)` makes every user depend on a profile, not the other way around. It is probably a flipped `Ref` in the DBML (it should likely be `user_profiles.user_id` pointing at `users.id`). The API works with it as written, creating the profile before the user and deleting the user before the profile, but fixing it would be simpler and safer.
-2. **No uniqueness on favorites, upvotes or downvotes.** Nothing in the database stops the same person favoriting the same activity twice. The API prevents it (one request at a time per person, and it checks first), but a unique constraint on `(user_id, activity_id)` in each table would make it certain.
-3. **`users.email` is not unique.** Supabase already enforces unique emails, so this is fine for now.
-4. **`user_profiles.timezone` is a `timestamp`.** A timezone is usually a name like `America/Los_Angeles` (text). The API doesn't use it.
-5. **`terms_version` keeps only the latest version** each person accepted, with no history of earlier ones.
-6. **The seed's emotion scores are placeholders.** The first emotion listed for each activity scores 100, then 90, 80 and so on. Replace them with real scores.
-7. **No indexes on the foreign key columns** (for example `favorites.user_id`). Not a problem at this size.
+1. **`users.email` is not unique.** Supabase already enforces unique emails, so this is fine for now.
+2. **`user_profiles.timezone` is a `timestamp`.** A timezone is usually a name like `America/Los_Angeles` (text). The API doesn't use it.
+3. **`terms_version` keeps only the latest version** each person accepted, with no history of earlier ones.
+4. **The seed's emotion scores are placeholders.** The first emotion listed for each activity scores 100, then 90, 80 and so on. Replace them with real scores.
+5. **No indexes on the foreign key columns** (for example `favorites.user_id`). The unique constraints on favorites and votes cover the common lookups, so this is fine at this size.
 
 ## Endpoints
 
@@ -107,7 +107,7 @@ Run it on a Virtual Instance next to managed Postgres, behind Nginx or Caddy for
 
 ```sh
 npm test                    # API tests with an in-memory database and a fake Supabase (no network)
-DATABASE_URL=postgresql://... npm run test:sql   # loads your schema, the additions and the seed, then runs every query, into an EMPTY scratch Postgres
+DATABASE_URL=postgresql://... npm run test:sql   # loads your schema (which erases the database first!), the additions and the seed, then runs every query. Scratch databases only.
 ```
 
 ## Not included yet

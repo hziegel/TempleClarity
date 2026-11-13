@@ -27,9 +27,8 @@ function makeDb() {
       case Q.activityById: return { rows: ACTS.filter((a) => a.id === p[1]).map((a) => act(a, null)) };
       case Q.userIdBySupabase: return { rows: st.links.has(p[0]) ? [{ user_id: st.links.get(p[0]) }] : [] };
       case Q.lockText: case Q.lockUser: return { rows: [] };
-      case Q.userNextId: return { rows: [{ id: st.nextId++ }] };
-      case Q.profileInsert: st.profiles.set(p[0], { background_art: 1, music_on: true, country: null }); return { rows: [] };
-      case Q.userInsert: st.users.set(p[0], { id: p[0], email: p[1], verified: p[2], terms_accepted: null, terms_version: null, password_hash: "!supabase" }); return { rows: [] };
+      case Q.userInsert: { const id = st.nextId++; st.users.set(id, { id, email: p[0], verified: p[1], terms_accepted: null, terms_version: null, password_hash: "!supabase" }); return { rows: [{ id }] }; }
+      case Q.profileInsert: if (!st.users.has(p[0])) throw new Error("foreign key: profile needs a user"); st.profiles.set(p[0], { background_art: 1, music_on: true, country: null }); return { rows: [] };
       case Q.supabaseLinkInsert: st.links.set(p[0], p[1]); return { rows: [] };
       case Q.userTouch: Object.assign(st.users.get(p[0]), { email: p[1], seen: true }); return { rows: [] };
       case Q.termsAccept: Object.assign(st.users.get(p[0]), { terms_accepted: true, terms_version: p[1] }); return { rows: [] };
@@ -55,8 +54,8 @@ function makeDb() {
       case Q.deleteUpvotes: drop("ups", p[0]); return { rows: [] };
       case Q.deleteDownvotes: drop("downs", p[0]); return { rows: [] };
       case Q.deleteUserAbilities: case Q.deleteSiteEvents: return { rows: [] };
-      case Q.deleteUser: st.users.delete(p[0]); for (const [k, v] of st.links) if (v === p[0]) st.links.delete(k); return { rows: [] };
       case Q.deleteProfile: st.profiles.delete(p[0]); return { rows: [] };
+      case Q.deleteUser: if (st.profiles.has(p[0])) throw new Error("foreign key: profile still points at this user"); st.users.delete(p[0]); for (const [k, v] of st.links) if (v === p[0]) st.links.delete(k); return { rows: [] };
       case Q.errorLogInsert: st.logs.push(p); return { rows: [] };
       default: throw new Error("unknown query: " + sql);
     }

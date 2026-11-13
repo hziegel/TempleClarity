@@ -118,9 +118,8 @@ export function createServer({ db, supabase, config }) {
       await q(Q.lockText, [user.id]);                      // two first requests at once: one waits
       const again = await q(Q.userIdBySupabase, [user.id]);
       if (again.rows.length) return again.rows[0].user_id;
-      const id = (await q(Q.userNextId)).rows[0].id;
+      const id = (await q(Q.userInsert, [user.email, user.emailConfirmedAt || null])).rows[0].id;
       await q(Q.profileInsert, [id]);
-      await q(Q.userInsert, [id, user.email, user.emailConfirmedAt || null]);
       await q(Q.supabaseLinkInsert, [user.id, id]);
       return id;
     });
@@ -245,8 +244,8 @@ export function createServer({ db, supabase, config }) {
     await db.tx(async (q) => {
       await q(Q.lockUser, [user.localId]);
       for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents]) await q(sql, [user.localId]);
-      await q(Q.deleteUser, [user.localId]);              // must come before the profile, which users points at
       await q(Q.deleteProfile, [user.localId]);
+      await q(Q.deleteUser, [user.localId]);
     });
     try { await supabase.deleteUser(user.id); }
     catch (e) {

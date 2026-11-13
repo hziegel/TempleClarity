@@ -31,9 +31,8 @@ check("emotion sorting puts the best score first", "(SELECT id FROM (" + one(Q.a
 // ---- first sign-in creates a user, a profile and the link ---------------------------------
 run(Q.userIdBySupabase, [SB]);
 run(Q.lockText, [SB]);
-out(Q.userNextId, [], "u");
+out(Q.userInsert, ["heron@example.com", "2026-11-13T10:00:00Z"], "u");
 run(Q.profileInsert, [":u_id"]);
-run(Q.userInsert, [":u_id", "heron@example.com", "2026-11-13T10:00:00Z"]);
 run(Q.supabaseLinkInsert, [SB, ":u_id"]);
 out(Q.userIdBySupabase, [SB], "found");
 check("user linked to supabase id", ":found_user_id = :u_id");
@@ -70,8 +69,6 @@ check("error logged", "(SELECT count(*) = 1 FROM error_logs WHERE source = 'audi
 // ---- account deletion (order matters because of the foreign keys) -------------------------
 run(Q.favInsert, [":u_id", "3"]);
 run(Q.upInsert, [":u_id", "3"]);
-for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents]) run(sql, [":u_id"]);
-run(Q.deleteUser, [":u_id"]);
-run(Q.deleteProfile, [":u_id"]);
+for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents, Q.deleteProfile, Q.deleteUser]) run(sql, [":u_id"]);
 check("everything about the user is gone", `(SELECT count(*) = 0 FROM users WHERE id = :u_id) AND (SELECT count(*) = 0 FROM user_profiles WHERE user_id = :u_id) AND (SELECT count(*) = 0 FROM supabase_users WHERE supabase_user_id = '${SB}') AND (SELECT count(*) = 0 FROM favorites WHERE user_id = :u_id) AND (SELECT count(*) = 0 FROM downvotes WHERE user_id = :u_id)`);
 console.log(lines.join("\n"));
