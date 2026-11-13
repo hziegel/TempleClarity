@@ -330,6 +330,14 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
       <p class="auth-alt" id="forgot-wrap"><a href="#" id="forgot">Forgot password?</a></p>
       <p class="auth-alt"><a href="#terms">Terms of Service</a></p>
     </form>
+    <form class="auth" id="recover-form" novalidate hidden>
+      <label for="rec-pass">New password</label>
+      <input class="field" id="rec-pass" type="password" autocomplete="new-password" aria-describedby="rec-msg">
+      <label for="rec-pass2">Confirm new password</label>
+      <input class="field" id="rec-pass2" type="password" autocomplete="new-password" aria-describedby="rec-msg">
+      <p class="auth-msg" id="rec-msg" role="alert"></p>
+      <div class="auth-actions"><button class="btn" type="submit">Save new password</button></div>
+    </form>
     <div class="loggedin" id="loggedin" hidden>
       <p id="loggedin-msg"></p>
       <button class="btn" id="logout-btn" type="button">Log out</button>
@@ -488,7 +496,15 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
 //   flushErrorLog()                               send unsent entries to your backend
 // Set ERROR_LOG_ENDPOINT to your logging URL once the backend exists.
 // ---------------------------------------------------------------
-const ERROR_LOG_ENDPOINT = null;      // e.g. "/api/log"
+// ---- Connection settings: fill these in once the backend and Supabase are running ----
+// Leave them empty to run in local mode (activities and favorites stay in this browser).
+const TC_CONFIG = {
+  apiBase: "",            // "" = the same site as this page, or e.g. "https://api.templeclarity.com"
+  supabaseUrl: "",        // Supabase: Project Settings > API > Project URL
+  supabaseAnonKey: ""     // Supabase: the public "anon" key. Never put the service_role key here.
+};
+const CONNECTED = !!(TC_CONFIG.supabaseUrl && TC_CONFIG.supabaseAnonKey);
+const ERROR_LOG_ENDPOINT = CONNECTED ? TC_CONFIG.apiBase + "/api/log" : null;
 const ERROR_LOG_MAX = 50;             // keep the newest 50 entries
 const ERROR_LOG_KEY = "tc-errors";    // sessionStorage: cleared when the tab closes
 let errorLog = [];
@@ -540,7 +556,9 @@ function flushErrorLog() {
   if (!unsent.length) return false;
   try {
     const body = JSON.stringify(unsent.map(({ last, sent, ...rest }) => rest));
-    const ok = navigator.sendBeacon ? navigator.sendBeacon(ERROR_LOG_ENDPOINT, new Blob([body], { type: "application/json" })) : false;
+    // fetch with keepalive survives the page closing, like sendBeacon, but works across sites without cookies.
+    let ok = false;
+    try { fetch(ERROR_LOG_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true, credentials: "omit" }).catch(() => {}); ok = true; } catch (e) {}
     if (ok) { unsent.forEach(x => { x.sent = true; }); flushedAt.push(now); saveErrorLog(); }
     return ok;
   } catch (e) { return false; }
@@ -567,6 +585,7 @@ function show(){
     renderSearch();
   } else if (name === "login") {
     renderLoginPage();
+    if (CONNECTED) loadSupabase().catch(() => {});
   } else if (name === "profile") {
     renderProfile();
   }
@@ -593,10 +612,9 @@ document.querySelectorAll(".pick").forEach(b => b.onclick = () => {
 });
 
 // ---------------------------------------------------------------
-// PLACEHOLDER recommender. Swap getRankedActivities() for a call to your
-// real recommender / database when they are ready. It receives the chosen
-// emotion and time bucket and should return an array of activities
-// ({ id, title, description, minutes }) in ranked order, best first.
+// Recommender. In connected mode the API returns matching activities best first
+// (ordered by the relevance scores in the database). In local mode, or if the API
+// can't be reached, the bundled list below is used instead.
 // ---------------------------------------------------------------
 const ACTIVITIES = [
   { id: 1,  bucket: "short",  minutes: 5,  genres: ["Mindful/Meditative","Distress Tolerance"], emotions: ["Nervous","Scared","Mad","Calm"], title: "Box breathing", description: "Breathe in for four counts, hold for four, out for four, hold for four. Repeat a few times, slowly." },
@@ -620,21 +638,48 @@ const GENRES = ["Mindful/Meditative","Distress Tolerance","Drawing","Crafting","
 let seenIdeas = [];
 // Ordered queue so "Try another" never repeats until every option has been shown.
 let ideaQueue = [], ideaLast = null;
-// Swap point for the real recommender: return the matching activities
-// in ranked order (best first). The queue below shows them in that order.
-function getRankedActivities(emotion, bucket) {
+function mapApiActivity(a) {
+  const minutes = a.minutes ?? a.minMinutes ?? 0;
+  return { id: a.id, title: a.title, description: a.description || "", minutes,
+           bucket: minutes <= 15 ? "short" : minutes <= 45 ? "medium" : "long",
+           genres: a.genres || [], emotions: a.emotions || [] };
+}
+async function getRankedActivities(emotion, bucket) {
+  if (CONNECTED) {
+    try {
+      const qs = new URLSearchParams();
+      if (bucket) qs.set("bucket", bucket);
+      if (emotion) qs.set("emotion", emotion);
+      const r = await apiFetch("/api/activities?" + qs, { auth: false });
+      if (r.activities.length) return r.activities.map(mapApiActivity);
+    } catch (e) { logError("activities", e, { level: "warn" }); }
+  }
   const pool = bucket ? ACTIVITIES.filter(a => a.bucket === bucket) : ACTIVITIES;
   const tagged = emotion ? pool.filter(a => a.emotions.includes(emotion)) : [];
   return tagged.length ? tagged : pool;
 }
-function nextFromQueue(emotion, bucket) {
+async function nextFromQueue(emotion, bucket) {
   if (!ideaQueue.length) {
-    const q = getRankedActivities(emotion, bucket).slice();
+    const q = (await getRankedActivities(emotion, bucket)).slice();
     // Start the next cycle after the activity just shown, keeping ranked order.
     const k = q.findIndex(a => a.id === ideaLast);
     ideaQueue = k >= 0 ? q.slice(k + 1).concat(q.slice(0, k + 1)) : q;
   }
   return ideaQueue.shift();
+}
+// Loads the full list once (for search, profile and shared links) and swaps it in.
+async function loadActivities() {
+  if (!CONNECTED) return;
+  try {
+    const r = await apiFetch("/api/activities", { auth: false });
+    const list = r.activities.map(mapApiActivity);
+    if (!list.length) return;
+    ACTIVITIES.splice(0, ACTIVITIES.length, ...list);
+    const h = location.hash;
+    if (h === "#search") renderSearch();
+    else if (h === "#profile") renderProfile();
+    else if (/^#activity-\d+$/.test(h) && !(chosenEmotion && chosenTime)) showActivityById(Number(h.slice(10)));
+  } catch (e) { logError("activities", e, { level: "warn" }); }
 }
 let currentIdea = null;
 function fillActivity(a) {
@@ -658,15 +703,20 @@ function showActivityById(id) {
   fillActivity(a);
   return true;
 }
+let ideaBusy = false;
 async function renderIdea(reset) {
   if (reset) { seenIdeas = []; ideaQueue = []; ideaLast = null; }
-  const flow = !!(chosenEmotion && chosenTime);
-  setContext(flow ? "Feeling " + chosenEmotion.toLowerCase() + ", with " + chosenTimeLabel + "." : "");
-  const a = nextFromQueue(flow ? chosenEmotion : null, flow ? chosenTime : null);
-  if (!a) return;
-  seenIdeas.push(a.id); ideaLast = a.id;
-  fillActivity(a);
-  try { history.replaceState(null, "", "#activity-" + a.id); } catch (e) {}
+  if (ideaBusy) return;
+  ideaBusy = true;
+  try {
+    const flow = !!(chosenEmotion && chosenTime);
+    setContext(flow ? "Feeling " + chosenEmotion.toLowerCase() + ", with " + chosenTimeLabel + "." : "");
+    const a = await nextFromQueue(flow ? chosenEmotion : null, flow ? chosenTime : null);
+    if (!a) return;
+    seenIdeas.push(a.id); ideaLast = a.id;
+    fillActivity(a);
+    try { history.replaceState(null, "", "#activity-" + a.id); } catch (e) {}
+  } finally { ideaBusy = false; }
 }
 const copyLabel = document.getElementById("copy-label");
 let copyTimer = null;
@@ -706,6 +756,7 @@ musicBtn.addEventListener("click", () => {
   try { localStorage.setItem("tc-sound", soundOn ? "on" : "off"); } catch (e) {}
   if (!soundOn && audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
   renderSound();
+  if (accountMode()) apiFetch("/api/profile", { method: "PUT", body: { musicOn: soundOn } }).catch(e => logError("save-sound", e, { level: "warn" }));
 });
 renderSound();
 let audioCtx = null;
@@ -818,10 +869,33 @@ menuBtn.addEventListener("click", () => setMenu(menuEl.hidden));
 document.addEventListener("click", e => { if (!menuEl.hidden && !menuEl.contains(e.target) && !menuBtn.contains(e.target)) setMenu(false); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !menuEl.hidden) { setMenu(false); menuBtn.focus(); } });
 menuEl.addEventListener("click", e => { if (e.target.closest("a")) setMenu(false); });
-// Favorites and votes are saved in this browser only for now.
-// When accounts and a database exist, send these to the server instead.
-let reactions = {};
-try { reactions = JSON.parse(localStorage.getItem("tc-reactions") || "{}"); } catch (e) { logError("load-reactions", e, { level: "warn" }); }
+// Favorites and votes. Logged in (connected mode): saved to the account through the API and
+// kept off this device. Otherwise: saved in this browser only.
+function loadLocalReactions() {
+  try { return JSON.parse(localStorage.getItem("tc-reactions") || "{}"); }
+  catch (e) { logError("load-reactions", e, { level: "warn" }); return {}; }
+}
+let reactions = loadLocalReactions();
+const accountMode = () => CONNECTED && !!currentUser;
+let reactionChain = Promise.resolve();
+function applyReaction(id, patch) {
+  reactions[id] = Object.assign({}, reactions[id], patch);
+  if (accountMode()) {
+    const body = {};
+    if ("fav" in patch) body.fav = !!patch.fav;
+    if ("vote" in patch) body.vote = patch.vote || null;
+    reactionChain = reactionChain
+      .then(() => apiFetch("/api/reactions/" + id, { method: "PUT", body }))
+      .catch(async e => {
+        logError("save-reaction", e, { level: "warn" });
+        toast("Couldn\u2019t save that. Try again.");
+        try { reactions = (await apiFetch("/api/reactions")).reactions; } catch (e2) { /* keep what is on screen */ }
+        renderReactions();
+      });
+  } else {
+    try { localStorage.setItem("tc-reactions", JSON.stringify(reactions)); } catch (e) { logError("save-reactions", e, { level: "warn" }); }
+  }
+}
 function renderReactions() {
   const r = reactions[currentIdea] || {};
   document.getElementById("fav").setAttribute("aria-pressed", r.fav ? "true" : "false");
@@ -829,8 +903,7 @@ function renderReactions() {
   document.getElementById("down").setAttribute("aria-pressed", r.vote === "down" ? "true" : "false");
 }
 function setReaction(patch) {
-  reactions[currentIdea] = Object.assign({}, reactions[currentIdea], patch);
-  try { localStorage.setItem("tc-reactions", JSON.stringify(reactions)); } catch (e) { logError("save-reactions", e, { level: "warn" }); }
+  applyReaction(currentIdea, patch);
   renderReactions();
 }
 const cur = () => reactions[currentIdea] || {};
@@ -890,10 +963,7 @@ document.getElementById("clear-filters").onclick = () => {
 const PF_NAMES = { fav: "Favorites", up: "Upvotes", down: "Downvotes" };
 const TRASH_SVG = "<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='#cefbf4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M3 6h18'/><path d='M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2'/><path d='M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/><path d='M10 11v6M14 11v6'/></svg>";
 function pfApply(k, id, on) {
-  const r = Object.assign({}, reactions[id]);
-  if (k === "fav") r.fav = on; else r.vote = on ? k : null;
-  reactions[id] = r;
-  try { localStorage.setItem("tc-reactions", JSON.stringify(reactions)); } catch (e) { logError("save-reactions", e, { level: "warn" }); }
+  applyReaction(id, k === "fav" ? { fav: on } : { vote: on ? k : null });
 }
 function pfUpdateCount(k) {
   const n = document.getElementById("pf-" + k).querySelectorAll(".pf-row:not(.removed)").length;
@@ -950,23 +1020,157 @@ function renderProfile() {
     pfUpdateCount(k);
   });
 }
-// ---- Log in / create account (front end only) ----
-// Nothing is sent anywhere yet. Replace authRequest() with a call to your
-// server (for example fetch("/api/login", ...)) once accounts exist. Never
-// store the password in the browser.
-async function authRequest(mode, creds) {
-  throw new Error("Accounts aren\u2019t connected yet, so this form can\u2019t sign anyone in.");
+// ---- Accounts ----
+// Connected mode: Supabase handles sign-up, log-in and passwords; the backend API stores favorites,
+// votes and settings. Local mode (no TC_CONFIG values): the form says accounts aren't set up.
+// The password is never stored by this page.
+const SB_SRC = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
+let sbClient = null, sbLoading = null, recoveryMode = false;
+function loadSupabase() {
+  if (!CONNECTED) return Promise.reject(new Error("Accounts aren’t connected yet, so this form can’t sign anyone in."));
+  if (sbClient) return Promise.resolve(sbClient);
+  if (sbLoading) return sbLoading;
+  sbLoading = new Promise((resolve, reject) => {
+    const el = document.createElement("script");
+    el.src = SB_SRC;
+    el.onload = () => {
+      try {
+        sbClient = window.supabase.createClient(TC_CONFIG.supabaseUrl, TC_CONFIG.supabaseAnonKey,
+          { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+        sbClient.auth.onAuthStateChange((ev, session) => setTimeout(() => onAuthEvent(ev, session), 0));
+        resolve(sbClient);
+      } catch (e) { sbLoading = null; reject(e); }
+    };
+    el.onerror = () => { sbLoading = null; el.remove(); reject(new Error("Couldn’t reach the sign-in service. Check your connection and try again.")); };
+    document.head.appendChild(el);
+  });
+  return sbLoading;
 }
-// Session state. The server should be the source of truth: replace
-// sessionRequest() and logoutRequest() with calls to your server
-// (for example fetch("/api/session") and fetch("/api/logout", { method: "POST" })).
-// authRequest() should resolve with { email } when the login succeeds.
-async function sessionRequest() { return null; }
-async function logoutRequest() { /* nothing to end yet: there is no server session */ }
-// Backend swap point: DELETE /api/account with the password. The server should
-// verify it, then delete the user, their favorites/votes and any sessions.
+// The sign-in library is only downloaded when it is needed: a saved session, the login page,
+// or a link from a confirmation or password-reset email.
+function needsAuthLib() {
+  if (!CONNECTED) return false;
+  if (/access_token=|type=(recovery|signup|magiclink)|error_code=/.test(location.hash + location.search)) return true;
+  try { for (let i = 0; i < localStorage.length; i++) if (/^sb-.+-auth-token$/.test(localStorage.key(i))) return true; } catch (e) {}
+  return false;
+}
+async function apiFetch(path, opts) {
+  opts = opts || {};
+  const headers = { Accept: "application/json" };
+  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+  if (opts.auth !== false && sbClient) {
+    const { data } = await sbClient.auth.getSession();
+    if (data && data.session) headers.Authorization = "Bearer " + data.session.access_token;
+  }
+  let res;
+  try {
+    res = await fetch(TC_CONFIG.apiBase + path, { method: opts.method || "GET", headers, body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined });
+  } catch (e) { throw new Error("Couldn’t reach the server. Check your connection and try again."); }
+  if (res.status === 204) return null;
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((data && data.error) || "Something went wrong (" + res.status + ").");
+  return data;
+}
+function friendlyAuthError(e) {
+  const m = String((e && e.message) || "");
+  if (/invalid login credentials/i.test(m)) return "That email and password don’t match.";
+  if (/email not confirmed/i.test(m)) return "Confirm your email first. Check your inbox for the link we sent.";
+  if (/already registered|already been registered/i.test(m)) return "An account with that email already exists. Try logging in.";
+  if (/rate limit|too many/i.test(m)) return "Too many tries. Wait a minute and try again.";
+  if (/password/i.test(m) && /(least|weak|short|characters)/i.test(m)) return "Choose a stronger password (at least 8 characters).";
+  return m || "Something went wrong. Try again.";
+}
+// Resolves with { email } when signed in, or { pending: true } when the person must confirm their email first.
+async function authRequest(mode, creds) {
+  const sb = await loadSupabase();
+  if (mode === "signup") {
+    const { data, error } = await sb.auth.signUp({ email: creds.email, password: creds.password,
+      options: { emailRedirectTo: location.origin + location.pathname + "#login",
+                 data: { terms_accepted: true, terms_version: creds.termsVersion } } });
+    if (error) throw new Error(friendlyAuthError(error));
+    if (!data.session) {
+      try { localStorage.setItem("tc-terms-pending", JSON.stringify({ email: creds.email.toLowerCase(), version: creds.termsVersion })); } catch (e) {}
+      return { pending: true };
+    }
+    try { localStorage.setItem("tc-terms-pending", JSON.stringify({ email: creds.email.toLowerCase(), version: creds.termsVersion })); } catch (e) {}
+  } else {
+    const { error } = await sb.auth.signInWithPassword({ email: creds.email, password: creds.password });
+    if (error) throw new Error(friendlyAuthError(error));
+  }
+  const u = await finishSignIn();
+  if (!u) throw new Error("Couldn’t finish signing you in. Try again.");
+  return u;
+}
+let finishing = null;
+function finishSignIn() {
+  if (finishing) return finishing;
+  finishing = (async () => {
+    const r = await apiFetch("/api/session");
+    if (!r || !r.user) return null;
+    setUser(r.user);
+    await loadAccountData();
+    syncTerms(r.user);
+    return r.user;
+  })().finally(() => { finishing = null; });
+  return finishing;
+}
+async function loadAccountData() {
+  try {
+    const [rx, pf] = await Promise.all([apiFetch("/api/reactions"), apiFetch("/api/profile")]);
+    reactions = rx.reactions || {};
+    if (pf && pf.profile && typeof pf.profile.musicOn === "boolean" && pf.profile.musicOn !== soundOn) {
+      soundOn = pf.profile.musicOn;
+      try { localStorage.setItem("tc-sound", soundOn ? "on" : "off"); } catch (e) {}
+      if (!soundOn && audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+      renderSound();
+    }
+  } catch (e) { logError("load-account", e, { level: "warn" }); }
+  if (currentIdea != null) renderReactions();
+  if (location.hash === "#profile") renderProfile();
+}
+// Records the terms accepted at sign-up (best effort; retried at the next log-in if it fails).
+function syncTerms(user) {
+  try {
+    const p = JSON.parse(localStorage.getItem("tc-terms-pending") || "null");
+    if (!p || !user.email || p.email !== user.email.toLowerCase()) return;
+    apiFetch("/api/terms-acceptance", { method: "POST", body: { version: p.version } })
+      .then(() => localStorage.removeItem("tc-terms-pending"))
+      .catch(e => logError("terms-sync", e, { level: "warn" }));
+  } catch (e) {}
+}
+async function sessionRequest() {
+  if (!needsAuthLib()) return null;
+  const sb = await loadSupabase();
+  const { data } = await sb.auth.getSession();
+  if (!data || !data.session) return null;
+  const u = await finishSignIn();
+  return u;
+}
+async function logoutRequest() {
+  if (!CONNECTED) return;
+  const sb = await loadSupabase();
+  const { error } = await sb.auth.signOut();
+  if (error) throw error;
+}
+function clearAccountState() {
+  reactions = loadLocalReactions();
+  if (currentIdea != null) renderReactions();
+  if (location.hash === "#profile") renderProfile();
+}
+function onAuthEvent(ev, session) {
+  if (ev === "PASSWORD_RECOVERY") { recoveryMode = true; location.hash === "#login" ? renderLoginPage() : (location.hash = "#login"); }
+  else if (ev === "SIGNED_IN" && session && !currentUser && !recoveryMode) {
+    finishSignIn().then(u => { if (u) { toast("You’re logged in."); if (location.hash === "#login" || !location.hash) location.hash = "#"; } })
+      .catch(e => logError("sign-in-event", e, { level: "warn" }));
+  } else if (ev === "SIGNED_OUT" && currentUser) { setUser(null); clearAccountState(); }
+}
+// Backend: DELETE /api/account with the password. The server checks it, deletes the user and
+// their favorites and votes, then this page ends the local session.
 async function deleteAccountRequest(password) {
-  throw new Error("Accounts aren\u2019t connected yet, so nothing can be deleted.");
+  if (!CONNECTED) throw new Error("Accounts aren’t connected yet, so nothing can be deleted.");
+  await apiFetch("/api/account", { method: "DELETE", body: { password } });
+  try { const sb = await loadSupabase(); await sb.auth.signOut(); } catch (e) { /* the account is already gone */ }
 }
 let currentUser = null;
 let toastTimer = null;
@@ -995,8 +1199,11 @@ function updateAuthUI() {
 function setUser(u) { currentUser = u && u.email ? { email: u.email } : null; updateAuthUI(); }
 function renderLoginPage() {
   const li = !!currentUser;
-  document.getElementById("auth-form").hidden = li;
-  document.getElementById("loggedin").hidden = !li;
+  const rec = recoveryMode && CONNECTED;
+  document.getElementById("auth-form").hidden = li || rec;
+  document.getElementById("recover-form").hidden = !rec;
+  document.getElementById("loggedin").hidden = !li || rec;
+  if (rec) { document.getElementById("login-title").textContent = "Choose a new password"; return; }
   closeDelete(false);
   if (li) {
     document.getElementById("login-title").textContent = "You\u2019re logged in";
@@ -1009,6 +1216,7 @@ async function doLogout() {
   try { await logoutRequest(); }
   catch (e) { logError("logout", e); toast("Couldn\u2019t log out. Try again."); return; }
   setUser(null);
+  clearAccountState();
   toast("You\u2019ve been logged out.");
   location.hash = "#";
 }
@@ -1034,10 +1242,11 @@ delConfirm.addEventListener("click", async () => {
   try { await deleteAccountRequest(delPass.value); }
   catch (e) { logError("delete-account", e, { level: "warn" }); delMsg.textContent = e.message || "Couldn\u2019t delete your account. Try again."; delConfirm.disabled = false; return; }
   delConfirm.disabled = false;
-  reactions = {};
-  try { localStorage.removeItem("tc-reactions"); } catch (e) {}
+  try { localStorage.removeItem("tc-reactions"); localStorage.removeItem("tc-terms-pending"); } catch (e) {}
   closeDelete(false);
   setUser(null);
+  reactions = {};
+  if (currentIdea != null) renderReactions();
   toast("Your account has been deleted.");
   location.hash = "#";
 });
@@ -1082,9 +1291,35 @@ document.getElementById("auth-switch").addEventListener("click", e => {
   e.preventDefault();
   setAuthMode(authMode === "login" ? "signup" : "login");
 });
-document.getElementById("forgot").addEventListener("click", e => {
+document.getElementById("forgot").addEventListener("click", async e => {
   e.preventDefault();
-  authMsg("Password reset isn\u2019t available yet.");
+  const emailEl = document.getElementById("auth-email");
+  if (!CONNECTED) return authMsg("Password reset isn\u2019t available yet.");
+  if (!emailEl.value.trim() || !emailEl.checkValidity()) { authMsg("Enter your email address above, then choose Forgot password again."); emailEl.focus(); return; }
+  authMsg("Sending\u2026");
+  try {
+    const sb = await loadSupabase();
+    const { error } = await sb.auth.resetPasswordForEmail(emailEl.value.trim(), { redirectTo: location.origin + location.pathname + "#login" });
+    if (error) throw new Error(friendlyAuthError(error));
+    authMsg("If an account exists for that email, a reset link is on its way.");
+  } catch (err) { logError("reset-password", err, { level: "warn" }); authMsg(err.message); }
+});
+document.getElementById("recover-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const p1 = document.getElementById("rec-pass"), p2 = document.getElementById("rec-pass2"), msg = document.getElementById("rec-msg");
+  if (p1.value.length < 8) { msg.textContent = "Use at least 8 characters for your password."; return; }
+  if (p1.value !== p2.value) { msg.textContent = "Passwords don\u2019t match."; return; }
+  msg.textContent = "Saving\u2026";
+  try {
+    const sb = await loadSupabase();
+    const { error } = await sb.auth.updateUser({ password: p1.value });
+    if (error) throw new Error(friendlyAuthError(error));
+    recoveryMode = false;
+    p1.value = p2.value = ""; msg.textContent = "";
+    const u = await finishSignIn();
+    toast("Your password has been changed.");
+    if (u) location.hash = "#"; else renderLoginPage();
+  } catch (err) { logError("recover-password", err, { level: "warn" }); msg.textContent = err.message; }
 });
 document.getElementById("showpass").addEventListener("click", () => {
   const pw = document.getElementById("auth-pass"), pw2 = document.getElementById("auth-pass2");
@@ -1108,7 +1343,7 @@ document.getElementById("auth-form").addEventListener("submit", async e => {
   authMsg("");
   try {
     const user = await authRequest(authMode, { email: emailEl.value.trim(), password: passEl.value, termsAccepted: signup ? true : undefined, termsVersion: signup ? TERMS_VERSION : undefined });
-    setUser(user);
+    if (user.pending) { authMsg("Almost done. Check your email and open the link we sent to confirm your account, then log in."); return; }
     toast(signup ? "Your account is ready." : "You\u2019re logged in.");
     location.hash = "#";
   } catch (err) {
@@ -1117,8 +1352,9 @@ document.getElementById("auth-form").addEventListener("submit", async e => {
     passEl.value = ""; pass2El.value = "";
   }
 });
-sessionRequest().then(u => { if (u) setUser(u); }).catch(e => logError("session-check", e, { level: "warn" }));
 show();
+loadActivities();
+sessionRequest().catch(e => logError("session-check", e, { level: "warn" }));
 </script>
 </body>
 </html>

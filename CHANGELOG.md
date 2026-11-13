@@ -5,9 +5,12 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 ## [Unreleased]
 
 ### Added
-- **Backend (`backend/`):** a small Node.js API using Postgres for data and Supabase for sign-in. Uses your `schema.sql` as-is, plus `schema_additions.sql` (Supabase link and error log tables), seed data for the 16 starting activities, endpoints for activities, session, profile, favorites/votes, terms acceptance, account deletion and the error log, and tests. The front end is not wired to it yet. See `backend/README.md`.
+- **Backend (`backend/`):** a small Node.js API using Postgres for data and Supabase for sign-in. Uses your `schema.sql` as-is, plus `schema_additions.sql` (Supabase link and error log tables), seed data for the 16 starting activities, endpoints for activities, session, profile, favorites/votes, terms acceptance, account deletion and the error log, and tests. See `backend/README.md`.
 
-Waiting on the backend: real sign-up, login, session, account deletion and error-log endpoints, plus the recommender and activity database. The front end already calls placeholder functions for each of them (`authRequest`, `sessionRequest`, `logoutRequest`, `deleteAccountRequest`, `getRankedActivities`, `ERROR_LOG_ENDPOINT`).
+- **Front end connected to the backend:** Supabase sign-up, log-in, log-out, session restore, email confirmation and password reset (with a new-password form); favorites and votes saved to the account; activities and their ranking loaded from the API (with the built-in list as a fallback); account deletion; accepted-terms recording; music setting sync; error log sent to `/api/log`. Fill in `TC_CONFIG` (`apiBase`, `supabaseUrl`, `supabaseAnonKey`) to switch it on; left empty, the page runs in local mode as before.
+
+### Changed
+- The error log now sends with `fetch` (keepalive, no cookies) instead of `sendBeacon` so it works across sites.
 
 ## 2026-11-13
 
