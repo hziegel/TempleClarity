@@ -9,6 +9,7 @@ Waiting on the backend: real sign-up, login, session, account deletion and error
 ## 2026-11-12
 
 ### Added
+- **Logo:** the Temple Clarity logo at the top center of every page (scrolls with the page, links home), and as the browser tab icon in place of the smiley.
 - **Delete account:** logged-in users can delete their account from the Log in page, after typing their password. Clears saved favorites and votes on the device. Needs a backend to work.
 - **Error log:** `logError`, `getErrorLog`, `clearErrorLog`, `flushErrorLog`. Catches uncaught errors and logs known failure points. Emails and tokens are scrubbed, repeats are merged, and the newest 50 entries are kept for the tab session. Nothing is sent anywhere until `ERROR_LOG_ENDPOINT` is set.
 - **Logged-out toast:** tapping the heart, thumbs up or thumbs down while logged out shows "Your response will not be saved unless you log in or create an account" with a Log in link.
