@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Q } from "./queries.js";
+import { recommend } from "./recommender.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STATIC_FILES = {
@@ -39,12 +40,6 @@ function createLimiter() {
     h.count++;
     if (h.count > max) throw new ApiError(429, "Too many requests. Please slow down.");
   };
-}
-
-// The place to plug in the real recommender: return matching activities, best first.
-export function rankActivities(pool, emotion) {
-  const tagged = emotion ? pool.filter((a) => a.emotions.includes(emotion)) : [];
-  return tagged.length ? tagged : pool;
 }
 
 // The front end's time choices, in minutes. An activity matches a choice when its
@@ -146,7 +141,7 @@ export function createServer({ db, supabase, config }) {
     if (bucket && !BUCKETS[bucket]) throw new ApiError(400, "Invalid bucket.");
     const [lo, hi] = bucket ? BUCKETS[bucket] : [null, null];
     const { rows } = await db.query(Q.activitiesList, [emotion, lo, hi]);
-    return { status: 200, body: { activities: rankActivities(rows.map(toActivity), emotion) } };
+    return { status: 200, body: { activities: recommend(rows, emotion).map(toActivity) } };
   });
 
   route("GET", "/api/activities/(\\d+)", async ({ match }) => {

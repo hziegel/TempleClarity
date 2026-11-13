@@ -9,8 +9,10 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Front end connected to the backend:** Supabase sign-up, log-in, log-out, session restore, email confirmation and password reset (with a new-password form); favorites and votes saved to the account; activities and their ranking loaded from the API (with the built-in list as a fallback); account deletion; accepted-terms recording; music setting sync; error log sent to `/api/log`. Fill in `TC_CONFIG` (`apiBase`, `supabaseUrl`, `supabaseAnonKey`) to switch it on; left empty, the page runs in local mode as before.
 
-### Changed
-- **Card text is easier to read:** larger, brighter text on the activity card, emotion cards and home cards, with a darker card background. Home card captions wrap to two lines instead of touching the edges.
+### Added (recommender)
+- **Recommender (`backend/src/recommender.js`):** ranks activities for the chosen feeling and time by `activity_emotions.relevance_score` (highest first, ties by id, a score of 0 hides an activity for that feeling, falls back to the whole time window if nothing is scored). No machine learning. Includes tests and a README section on setting scores.
+
+ is easier to read:** larger, brighter text on the activity card, emotion cards and home cards, with a darker card background. Home card captions wrap to two lines instead of touching the edges.
 - The error log now sends with `fetch` (keepalive, no cookies) instead of `sendBeacon` so it works across sites.
 
 ## 2026-11-13

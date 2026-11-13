@@ -78,7 +78,7 @@ Errors come back as `{ "error": "message" }` with a normal status code (400, 401
 
 | Front-end placeholder | Backend |
 | --- | --- |
-| `getRankedActivities()` | `GET /api/activities`. Ranking comes from `activity_emotions.relevance_score` and `rankActivities()` in `src/server.js`. Activities now carry `minMinutes`, `maxMinutes` and `minutes` instead of a `bucket`. |
+| `getRankedActivities()` | `GET /api/activities`. Ranking comes from `activity_emotions.relevance_score` and `recommend()` in `src/recommender.js`. Activities now carry `minMinutes`, `maxMinutes` and `minutes` instead of a `bucket`. |
 | `authRequest()`, `sessionRequest()`, `logoutRequest()` | Supabase JS (`signUp`, `signInWithPassword`, `getSession`, `signOut`). The front end sends the access token to this API. |
 | `deleteAccountRequest(password)` | `DELETE /api/account` |
 | `termsAccepted` / `termsVersion` at sign-up | pass as Supabase user metadata, then `POST /api/terms-acceptance` once the user has a session |
@@ -113,3 +113,35 @@ DATABASE_URL=postgresql://... npm run test:sql   # loads your schema (which eras
 ## Not included yet
 
 Sign-up email confirmation emails, password reset and email change all live in Supabase and need no code here. Endpoints for `site_events` (the recommender's input), the specific-activity and ability tables, and admin tools for adding activities or reading the error log aren't built; use SQL for now.
+
+## Recommender
+
+`src/recommender.js` ranks by the numbers you put in `activity_emotions.relevance_score`. There is no machine learning and nothing is learned from users.
+
+When someone picks a feeling and a time, the API first keeps the activities that fit the time, then:
+
+1. Keeps only activities with a score **above 0** for that feeling, highest score first.
+2. Breaks ties by activity id, so the order is always the same.
+3. If none in that time window has a positive score for that feeling, shows every activity in the window in id order, so nobody gets an empty page.
+
+A score of `0` (or less) means "never suggest this for this feeling". No feeling chosen (search, shared links) means all activities in id order. "Try another" on the site walks down this list in order and starts again at the top once it has been through all of it.
+
+Set scores in SQL (any whole numbers; only the order matters):
+
+```sql
+INSERT INTO activity_emotions (activity_id, emotion_id, relevance_score)
+SELECT a.id, e.id, 90
+FROM activities a, emotions e
+WHERE a.title = 'Box breathing' AND e.title = 'Calm';
+```
+
+To change an existing score:
+
+```sql
+UPDATE activity_emotions ae SET relevance_score = 95
+FROM activities a, emotions e
+WHERE ae.activity_id = a.id AND ae.emotion_id = e.id
+  AND a.title = 'Box breathing' AND e.title = 'Calm';
+```
+
+The scores in `seed.sql` are placeholders based on the order each activity's feelings were listed. Replace them with your own.
