@@ -6,6 +6,11 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 Waiting on the backend: real sign-up, login, session, account deletion and error-log endpoints, plus the recommender and activity database. The front end already calls placeholder functions for each of them (`authRequest`, `sessionRequest`, `logoutRequest`, `deleteAccountRequest`, `getRankedActivities`, `ERROR_LOG_ENDPOINT`).
 
+## 2026-11-13
+
+### Changed
+- **Logo:** new glowing blue-green logo in the page header (placed lower, full opacity, still scrolls with the page). The browser tab icon uses the flat blue-green version.
+
 ## 2026-11-12
 
 ### Added
