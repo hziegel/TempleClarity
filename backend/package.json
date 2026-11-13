@@ -1,0 +1,17 @@
+{
+  "name": "temple-clarity-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Small API for Temple Clarity: Postgres for data, Supabase for authentication.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js",
+    "db:setup": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f schema.sql -f seed.sql",
+    "test": "node --test",
+    "test:sql": "sh test/sql.sh"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}
