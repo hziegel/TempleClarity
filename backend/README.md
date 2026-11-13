@@ -116,17 +116,31 @@ Sign-up email confirmation emails, password reset and email change all live in S
 
 ## Recommender
 
-`src/recommender.js` ranks by the numbers you put in `activity_emotions.relevance_score`. There is no machine learning and nothing is learned from users.
+`src/recommender.js` ranks by the numbers you put in `activity_emotions.relevance_score`, then shuffles the order a little so the queue isn't identical every time. There is no machine learning and nothing is learned from users.
 
 When someone picks a feeling and a time, the API first keeps the activities that fit the time, then:
 
-1. Keeps only activities with a score **above 0** for that feeling, highest score first.
-2. Breaks ties by activity id, so the order is always the same.
-3. If none in that time window has a positive score for that feeling, shows every activity in the window in id order, so nobody gets an empty page.
+1. Keeps only activities with a score **above 0** for that feeling. A score of `0` (or less) means "never suggest this for this feeling".
+2. If none in that time window has a positive score for that feeling, uses every activity in the window with equal weight, so nobody gets an empty page.
+3. Orders them with **Gumbel-Max**: each activity gets the key `ln(score) / temperature + G`, where `G` is a random Gumbel number (`-ln(-ln(U))`, U uniform between 0 and 1), and the list is sorted by key, highest first. This is the same as picking activities one at a time without putting any back, each time choosing with probability proportional to its score. So scores are **relative weights**: an activity scored 90 is nine times as likely to come first as one scored 10, but not guaranteed to. Every activity still appears exactly once.
 
-A score of `0` (or less) means "never suggest this for this feeling". No feeling chosen (search, shared links) means all activities in id order. "Try another" on the site walks down this list in order and starts again at the top once it has been through all of it.
+No feeling chosen (search, shared links) means all activities in id order, never shuffled.
 
-Set scores in SQL (any whole numbers; only the order matters):
+"Try another" on the site walks down the list it received, so it never repeats until every activity has been shown. When it starts a new round it asks the API again (a fresh shuffle) and puts the activity just shown last, so it isn't repeated straight away.
+
+**Temperature** (`RECOMMENDER_TEMPERATURE` in `.env`, default `1`):
+
+| Value | Effect |
+| --- | --- |
+| `1` | Chance of coming first is proportional to the score. |
+| `0.5` | Stays closer to the score order. |
+| `0.2` | Almost always the score order. |
+| `2` or more | Flatter, more random. |
+| `0` | No shuffling. Strictly highest score first, ties by id. |
+
+Because only the ratios between scores matter, scores that are close together (like 100, 90, 80) behave almost randomly at temperature 1. Use a wider spread (for example 100, 50, 20) or a lower temperature if you want the top picks to win more often.
+
+Set scores in SQL (any positive whole numbers; the ratios between them are what matter):
 
 ```sql
 INSERT INTO activity_emotions (activity_id, emotion_id, relevance_score)

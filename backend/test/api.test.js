@@ -80,7 +80,7 @@ function makeSupabase() {
 let server, base, db, sb;
 before(async () => {
   db = makeDb(); sb = makeSupabase();
-  server = createServer({ db, supabase: sb, config: { allowedOrigins: ["https://templeclarity.com"], trustProxy: false, serveStatic: false } });
+  server = createServer({ db, supabase: sb, config: { allowedOrigins: ["https://templeclarity.com"], trustProxy: false, serveStatic: false, recommenderTemperature: 0 } });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
 });

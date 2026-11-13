@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Q } from "./queries.js";
-import { recommend } from "./recommender.js";
+import { recommend, DEFAULT_TEMPERATURE } from "./recommender.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STATIC_FILES = {
@@ -141,7 +141,7 @@ export function createServer({ db, supabase, config }) {
     if (bucket && !BUCKETS[bucket]) throw new ApiError(400, "Invalid bucket.");
     const [lo, hi] = bucket ? BUCKETS[bucket] : [null, null];
     const { rows } = await db.query(Q.activitiesList, [emotion, lo, hi]);
-    return { status: 200, body: { activities: recommend(rows, emotion).map(toActivity) } };
+    return { status: 200, body: { activities: recommend(rows, emotion, { temperature: config.recommenderTemperature ?? DEFAULT_TEMPERATURE, random: config.random }).map(toActivity) } };
   });
 
   route("GET", "/api/activities/(\\d+)", async ({ match }) => {

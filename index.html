@@ -663,9 +663,10 @@ async function getRankedActivities(emotion, bucket) {
 async function nextFromQueue(emotion, bucket) {
   if (!ideaQueue.length) {
     const q = (await getRankedActivities(emotion, bucket)).slice();
-    // Start the next cycle after the activity just shown, keeping ranked order.
+    // The server may reorder the list a little each time, so a new cycle can start with the
+    // activity just shown. Move that one to the end so it isn't repeated straight away.
     const k = q.findIndex(a => a.id === ideaLast);
-    ideaQueue = k >= 0 ? q.slice(k + 1).concat(q.slice(0, k + 1)) : q;
+    ideaQueue = k >= 0 ? q.slice(0, k).concat(q.slice(k + 1), q[k]) : q;
   }
   return ideaQueue.shift();
 }
