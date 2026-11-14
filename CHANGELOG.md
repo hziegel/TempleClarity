@@ -9,6 +9,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Front end connected to the backend:** Supabase sign-up, log-in, log-out, session restore, email confirmation and password reset (with a new-password form); favorites and votes saved to the account; activities and their ranking loaded from the API (with the built-in list as a fallback); account deletion; accepted-terms recording; music setting sync; error log sent to `/api/log`. Fill in `TC_CONFIG` (`apiBase`, `supabaseUrl`, `supabaseAnonKey`) to switch it on; left empty, the page runs in local mode as before.
 
+### Added (music)
+- **Default background music:** a quiet ambient loop (`ambient1-hum-pan`, re-encoded to 64 kbps and embedded in the page) fades in on the first tap, click or key press, because browsers block audio before that. The existing sound button turns it and the other sounds on or off, and the choice is remembered. It pauses while the tab is hidden. This makes the page about 2 MB.
+
 ### Added (recommender)
 - **Recommender (`backend/src/recommender.js`):** ranks activities for the chosen feeling and time by `activity_emotions.relevance_score` (a score of 0 hides an activity for that feeling; falls back to the whole time window if nothing is scored). No machine learning. Includes tests and a README section on setting scores.
 - **Gumbel-Max score perturbation:** the recommender orders activities with the Gumbel-Max trick, so the order changes from one request to the next while higher scores still tend to come first (chance of first place is proportional to the score). `RECOMMENDER_TEMPERATURE` controls how much (default 1; 0 turns shuffling off). "Try another" puts the activity just shown last when it starts a new round.
