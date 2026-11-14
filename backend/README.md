@@ -159,3 +159,7 @@ WHERE ae.activity_id = a.id AND ae.emotion_id = e.id
 ```
 
 The scores in `seed.sql` are placeholders based on the order each activity's feelings were listed. Replace them with your own.
+
+## Adding activities by hand
+
+`templates/add_activities.sql` is a fill-in-the-blanks template for adding activities (with their genres and per-feeling scores) in one go, plus three test examples whose titles start with `Test:`. It runs in the Supabase SQL editor or psql, is safe to run again (activities are matched by title and updated, not duplicated), and ends with a query showing what was saved and a commented-out cleanup that removes the `Test:` activities.
