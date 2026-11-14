@@ -14,6 +14,8 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Email list form on "What's this?":** anyone can join without an account. Emails go to a new `email_subscribers` table through `POST /api/subscribe` (address cleaned to lower case, repeats are harmless and get the same answer, 5 tries per hour per visitor, hidden spam-trap field). Nothing is emailed yet, so there is no confirmation email.
 
+- **About page wording:** the privacy sentence no longer says no personal information is stored; it now says only an email address, favorites and votes (for accounts) and the email address (for the email list) are kept.
+
 ### Added (music)
 - **Default background music:** a quiet ambient loop (`ambient1-hum-pan`, re-encoded to 64 kbps and embedded in the page) fades in on the first tap, click or key press, because browsers block audio before that. The existing sound button turns it and the other sounds on or off, and the choice is remembered. It pauses while the tab is hidden. This makes the page about 2 MB.
 
