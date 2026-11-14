@@ -307,6 +307,7 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
     <h1>Search Activities</h1>
     <input class="search" id="search-input" type="search" placeholder="Search by name" aria-label="Search activities" autocomplete="off">
     <div class="filters">
+      <label>Show <select class="sel" id="show-filter"><option value="">All</option><option value="fav">Favorites</option><option value="up">Upvotes</option></select></label>
       <label>Genre <select class="sel" id="genre"><option value="">All genres</option></select></label>
       <label>Min time <input class="num" id="min-time" type="number" inputmode="numeric" min="0" step="5" placeholder="0"> minutes</label>
       <label>Max time <input class="num" id="max-time" type="number" inputmode="numeric" min="0" step="5" placeholder="Any"> minutes</label>
@@ -1002,9 +1003,12 @@ function renderSearch() {
   const terms = q ? q.split(/\s+/) : [];
   const minV = readNum("min-time"), maxV = readNum("max-time");
   const genre = document.getElementById("genre").value;
+  const show = document.getElementById("show-filter").value;
   const hay = a => a.title.toLowerCase();
+  const mine = a => { const r = reactions[a.id] || {}; return show === "fav" ? !!r.fav : r.vote === "up"; };
   const list = ACTIVITIES.filter(a =>
     terms.every(t => hay(a).includes(t)) &&
+    (!show || mine(a)) &&
     (!genre || a.genres.includes(genre)) &&
     (minV === null || a.minutes >= minV) &&
     (maxV === null || a.minutes <= maxV));
@@ -1021,23 +1025,26 @@ function renderSearch() {
     el.append(t, d, g, m);
     box.appendChild(el);
   });
-  const active = terms.length > 0 || !!genre || minV !== null || maxV !== null;
+  const active = terms.length > 0 || !!genre || !!show || minV !== null || maxV !== null;
   document.getElementById("search-count").textContent = active
     ? list.length + " of " + ACTIVITIES.length + " activities"
     : ACTIVITIES.length + " activities";
   const reversed = minV !== null && maxV !== null && minV > maxV;
   const empty = document.getElementById("search-empty");
+  const noneYet = !!show && !terms.length && !genre && minV === null && maxV === null;
   empty.textContent = reversed
     ? "The minimum time is higher than the maximum. Change one of them."
-    : "No activity names match that search. Try a different word, or change the genre or time range.";
+    : noneYet
+      ? (show === "fav" ? "You haven\u2019t favorited any activities yet." : "You haven\u2019t upvoted any activities yet.")
+      : "No activity names match that search. Try a different word, or change the filters.";
   empty.hidden = list.length > 0;
   document.getElementById("clear-filters").hidden = !active;
 }
 const genreSel = document.getElementById("genre");
 GENRES.forEach(g => { const o = document.createElement("option"); o.value = g; o.textContent = g; genreSel.appendChild(o); });
-["search-input", "min-time", "max-time", "genre"].forEach(id => ["input", "change"].forEach(ev => document.getElementById(id).addEventListener(ev, renderSearch)));
+["search-input", "min-time", "max-time", "genre", "show-filter"].forEach(id => ["input", "change"].forEach(ev => document.getElementById(id).addEventListener(ev, renderSearch)));
 document.getElementById("clear-filters").onclick = () => {
-  ["search-input", "min-time", "max-time", "genre"].forEach(id => { document.getElementById(id).value = ""; });
+  ["search-input", "min-time", "max-time", "genre", "show-filter"].forEach(id => { document.getElementById(id).value = ""; });
   renderSearch();
 };
 // ---- My Profile: favorites, upvotes and downvotes only ----
@@ -1209,6 +1216,7 @@ async function loadAccountData() {
   } catch (e) { logError("load-account", e, { level: "warn" }); }
   if (currentIdea != null) renderReactions();
   if (location.hash === "#profile") renderProfile();
+  if (location.hash === "#search") renderSearch();
 }
 // Records what was chosen at sign-up: the terms version accepted and the email list box.
 // Best effort; if it fails it is retried at the next log-in.
@@ -1260,6 +1268,7 @@ function clearAccountState() {
   reactions = loadLocalReactions();
   if (currentIdea != null) renderReactions();
   if (location.hash === "#profile") renderProfile();
+  if (location.hash === "#search") renderSearch();
 }
 function onAuthEvent(ev, session) {
   if (ev === "PASSWORD_RECOVERY") { recoveryMode = true; location.hash === "#login" ? renderLoginPage() : (location.hash = "#login"); }
