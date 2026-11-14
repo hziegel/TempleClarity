@@ -12,7 +12,7 @@ const ACTS = [
   { id: 4, title: "D", description: "d", min_minutes: 10, max_minutes: 30, genres: [], emotions: ["Calm"], scores: { Calm: 95 } }, // spans short and medium
 ];
 function makeDb() {
-  const st = { links: new Map(), users: new Map(), profiles: new Map(), favs: [], ups: [], downs: [], logs: [], nextId: 100 };
+  const st = { links: new Map(), users: new Map(), profiles: new Map(), mail: new Map(), favs: [], ups: [], downs: [], logs: [], nextId: 100 };
   const act = (a, emotion) => ({ ...a, screen_only: false, group_only: false, requires_supplies: false, relevance: emotion ? a.scores[emotion] ?? null : null });
   const mine = (arr, uid, aid) => arr.some((r) => r.user_id === uid && r.activity_id === aid);
   const drop = (name, uid, aid) => { st[name] = st[name].filter((r) => !(r.user_id === uid && (aid == null || r.activity_id === aid))); };
@@ -54,6 +54,9 @@ function makeDb() {
       case Q.deleteUpvotes: drop("ups", p[0]); return { rows: [] };
       case Q.deleteDownvotes: drop("downs", p[0]); return { rows: [] };
       case Q.deleteUserAbilities: case Q.deleteSiteEvents: return { rows: [] };
+      case Q.emailListGet: return { rows: st.mail.has(p[0]) ? [{ subscribed: st.mail.get(p[0]) }] : [] };
+      case Q.emailListSet: st.mail.set(p[0], p[1]); return { rows: [{ subscribed: p[1] }] };
+      case Q.deleteEmailList: st.mail.delete(p[0]); return { rows: [] };
       case Q.deleteProfile: st.profiles.delete(p[0]); return { rows: [] };
       case Q.deleteUser: if (st.profiles.has(p[0])) throw new Error("foreign key: profile still points at this user"); st.users.delete(p[0]); for (const [k, v] of st.links) if (v === p[0]) st.links.delete(k); return { rows: [] };
       case Q.errorLogInsert: st.logs.push(p); return { rows: [] };
@@ -245,4 +248,25 @@ test("supabase client: token cache, 401 handling, password check, delete", async
   assert.equal(await sb2.verifyPassword("e@x.co", "pw"), true);
   assert.equal(await sb2.verifyPassword("e@x.co", "bad"), false);
   await sb2.deleteUser("u"); await sb2.deleteUser("gone"); // 404 counts as already deleted
+});
+
+test("email list: off by default, can be turned on and off, needs a login and a true/false value", async () => {
+  assert.equal((await call("GET", "/api/email-list")).status, 401);
+  assert.deepEqual((await call("GET", "/api/email-list", { token: "good-token" })).json, { subscribed: false });
+  const put = (body, token = "good-token") => call("PUT", "/api/email-list", { token, body });
+  assert.equal((await put({ subscribed: true }, null)).status, 401);
+  assert.equal((await put({ subscribed: "yes" })).status, 400);
+  assert.equal((await put({})).status, 400);
+  assert.deepEqual((await put({ subscribed: true })).json, { subscribed: true });
+  assert.deepEqual((await call("GET", "/api/email-list", { token: "good-token" })).json, { subscribed: true });
+  assert.deepEqual((await put({ subscribed: false })).json, { subscribed: false });
+  assert.deepEqual((await call("GET", "/api/email-list", { token: "good-token" })).json, { subscribed: false });
+});
+
+test("deleting the account removes the email list row", async () => {
+  await call("PUT", "/api/email-list", { token: "good-token", body: { subscribed: true } });
+  const id = [...db.st.mail.keys()][0];
+  assert.equal(db.st.mail.has(id), true);
+  assert.equal((await call("DELETE", "/api/account", { token: "good-token", body: { password: "right-password" } })).status, 204);
+  assert.equal(db.st.mail.has(id), false);
 });

@@ -62,6 +62,17 @@ export const Q = {
     WHERE user_id = $1
     RETURNING background_art, music_on, country`,
 
+  // ---- email list opt-in ---------------------------------------------------------------------
+  emailListGet: `SELECT subscribed FROM email_list WHERE user_id = $1`,
+  emailListSet: `
+    INSERT INTO email_list (user_id, subscribed, consented_at, updated_at)
+    VALUES ($1, $2::bool, CASE WHEN $2::bool THEN now() END, now())
+    ON CONFLICT (user_id) DO UPDATE SET
+      subscribed   = EXCLUDED.subscribed,
+      consented_at = CASE WHEN EXCLUDED.subscribed AND NOT email_list.subscribed THEN now() ELSE email_list.consented_at END,
+      updated_at   = now()
+    RETURNING subscribed`,
+
   // ---- favorites, upvotes, downvotes (three tables) --------------------------------------
   reactionsForUser: `
     SELECT activity_id, true AS fav, NULL::text AS vote FROM favorites WHERE user_id = $1
@@ -91,6 +102,7 @@ export const Q = {
   deleteDownvotes: `DELETE FROM downvotes WHERE user_id = $1`,
   deleteUserAbilities: `DELETE FROM user_abilities WHERE user_id = $1`,
   deleteSiteEvents: `DELETE FROM site_events WHERE user_id = $1`,
+  deleteEmailList: `DELETE FROM email_list WHERE user_id = $1`,
   deleteProfile: `DELETE FROM user_profiles WHERE user_id = $1`,
   deleteUser: `DELETE FROM users WHERE id = $1`,          // also removes the supabase_users link
 

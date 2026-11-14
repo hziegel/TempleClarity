@@ -46,6 +46,15 @@ check("profile updated", `(SELECT background_art = 2 AND music_on = false AND co
 run(Q.profileUpdate, [":u_id", "false", "0", "false", "true", "false", "XX"]);   // untouched fields stay
 check("profile partial update keeps other fields", `(SELECT background_art = 2 AND music_on = false AND country = 'US' FROM user_profiles WHERE user_id = :u_id)`);
 
+// ---- email list --------------------------------------------------------------------------
+run(Q.emailListGet, [":u_id"]);
+run(Q.emailListSet, [":u_id", "true"]);
+check("opted in", `(SELECT subscribed AND consented_at IS NOT NULL FROM email_list WHERE user_id = :u_id)`);
+run(Q.emailListSet, [":u_id", "false"]);
+check("opted out, row kept", `(SELECT NOT subscribed AND consented_at IS NOT NULL FROM email_list WHERE user_id = :u_id)`);
+run(Q.emailListSet, [":u_id", "true"]);
+check("opted back in", `(SELECT subscribed FROM email_list WHERE user_id = :u_id)`);
+
 // ---- favorites and votes -------------------------------------------------------------------
 run(Q.lockUser, [":u_id"]);
 run(Q.favInsert, [":u_id", "1"]);
@@ -69,6 +78,6 @@ check("error logged", "(SELECT count(*) = 1 FROM error_logs WHERE source = 'audi
 // ---- account deletion (order matters because of the foreign keys) -------------------------
 run(Q.favInsert, [":u_id", "3"]);
 run(Q.upInsert, [":u_id", "3"]);
-for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents, Q.deleteProfile, Q.deleteUser]) run(sql, [":u_id"]);
+for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents, Q.deleteEmailList, Q.deleteProfile, Q.deleteUser]) run(sql, [":u_id"]);
 check("everything about the user is gone", `(SELECT count(*) = 0 FROM users WHERE id = :u_id) AND (SELECT count(*) = 0 FROM user_profiles WHERE user_id = :u_id) AND (SELECT count(*) = 0 FROM supabase_users WHERE supabase_user_id = '${SB}') AND (SELECT count(*) = 0 FROM favorites WHERE user_id = :u_id) AND (SELECT count(*) = 0 FROM downvotes WHERE user_id = :u_id)`);
 console.log(lines.join("\n"));

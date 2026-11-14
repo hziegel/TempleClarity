@@ -24,6 +24,16 @@ CREATE TABLE IF NOT EXISTS error_logs (
 );
 CREATE INDEX IF NOT EXISTS error_logs_received_idx ON error_logs (received_at DESC);
 
+-- Who has opted in to the email list. A row appears only when someone ticks the box at sign-up
+-- (or changes it later). Turning it off keeps the row with subscribed = false so an
+-- unsubscribe is remembered. Deleted automatically with the account.
+CREATE TABLE IF NOT EXISTS email_list (
+  user_id      integer PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+  subscribed   boolean NOT NULL,
+  consented_at timestamp,                       -- when they last opted in
+  updated_at   timestamp NOT NULL DEFAULT now()
+);
+
 -- schema.sql recreates the public schema, which on Supabase drops its default access
 -- for the built-in roles. Give them back the basic right to see the schema (the tables
 -- themselves stay locked by the row level security below).

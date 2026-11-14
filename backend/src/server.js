@@ -183,6 +183,20 @@ export function createServer({ db, supabase, config }) {
     return { status: 200, body: { profile: { backgroundArt: row.background_art, musicOn: row.music_on, country: row.country } } };
   });
 
+  route("GET", "/api/email-list", async ({ req }) => {
+    const user = await requireLocalUser(req);
+    const row = (await db.query(Q.emailListGet, [user.localId])).rows[0];
+    return { status: 200, body: { subscribed: !!(row && row.subscribed) } };
+  });
+
+  route("PUT", "/api/email-list", async ({ req }) => {
+    const user = await requireLocalUser(req);
+    const { subscribed } = await readJson(req);
+    if (typeof subscribed !== "boolean") throw new ApiError(400, "subscribed must be true or false.");
+    const row = (await db.query(Q.emailListSet, [user.localId, subscribed])).rows[0];
+    return { status: 200, body: { subscribed: row.subscribed } };
+  });
+
   route("GET", "/api/reactions", async ({ req }) => {
     const user = await requireLocalUser(req);
     const { rows } = await db.query(Q.reactionsForUser, [user.localId]);
@@ -238,7 +252,7 @@ export function createServer({ db, supabase, config }) {
     if (!ok) throw new ApiError(403, "That password isn't right.");
     await db.tx(async (q) => {
       await q(Q.lockUser, [user.localId]);
-      for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents]) await q(sql, [user.localId]);
+      for (const sql of [Q.deleteFavorites, Q.deleteUpvotes, Q.deleteDownvotes, Q.deleteUserAbilities, Q.deleteSiteEvents, Q.deleteEmailList]) await q(sql, [user.localId]);
       await q(Q.deleteProfile, [user.localId]);
       await q(Q.deleteUser, [user.localId]);
     });

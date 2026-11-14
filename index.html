@@ -325,6 +325,7 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
         <div class="terms terms-box" id="terms-box" tabindex="0" role="region" aria-label="Terms of Service. Scroll to the end to enable the checkbox."></div>
         <p class="terms-hint" id="terms-hint" aria-live="polite"></p>
         <label class="agree"><input type="checkbox" id="agree" disabled aria-describedby="terms-hint"> <span>I have read and agree to the Terms of Service</span></label>
+        <label class="agree"><input type="checkbox" id="mail-opt"> <span>Email me occasional updates about Temple Clarity (optional). You can unsubscribe at any time.</span></label>
       </div>
       <p class="auth-msg" id="auth-msg" role="alert"></p>
       <div class="auth-actions"><button class="btn" id="auth-submit" type="submit">Log in</button></div>
@@ -342,6 +343,8 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
     </form>
     <div class="loggedin" id="loggedin" hidden>
       <p id="loggedin-msg"></p>
+      <label class="agree" id="mail-pref-wrap" hidden><input type="checkbox" id="mail-pref"> <span>Email me occasional updates about Temple Clarity</span></label>
+      <p class="auth-msg" id="mail-pref-msg" role="status"></p>
       <button class="btn" id="logout-btn" type="button">Log out</button>
       <div class="delacct">
         <button class="linkbtn" id="del-open" type="button" aria-expanded="false" aria-controls="del-panel">Delete my account</button>
@@ -1142,13 +1145,13 @@ async function authRequest(mode, creds) {
   if (mode === "signup") {
     const { data, error } = await sb.auth.signUp({ email: creds.email, password: creds.password,
       options: { emailRedirectTo: location.origin + location.pathname + "#login",
-                 data: { terms_accepted: true, terms_version: creds.termsVersion } } });
+                 data: { terms_accepted: true, terms_version: creds.termsVersion, email_list_opt_in: !!creds.emailList } } });
     if (error) throw new Error(friendlyAuthError(error));
     if (!data.session) {
-      try { localStorage.setItem("tc-terms-pending", JSON.stringify({ email: creds.email.toLowerCase(), version: creds.termsVersion })); } catch (e) {}
+      try { localStorage.setItem("tc-terms-pending", JSON.stringify({ email: creds.email.toLowerCase(), version: creds.termsVersion, emailList: !!creds.emailList })); } catch (e) {}
       return { pending: true };
     }
-    try { localStorage.setItem("tc-terms-pending", JSON.stringify({ email: creds.email.toLowerCase(), version: creds.termsVersion })); } catch (e) {}
+    try { localStorage.setItem("tc-terms-pending", JSON.stringify({ email: creds.email.toLowerCase(), version: creds.termsVersion, emailList: !!creds.emailList })); } catch (e) {}
   } else {
     const { error } = await sb.auth.signInWithPassword({ email: creds.email, password: creds.password });
     if (error) throw new Error(friendlyAuthError(error));
@@ -1184,16 +1187,38 @@ async function loadAccountData() {
   if (currentIdea != null) renderReactions();
   if (location.hash === "#profile") renderProfile();
 }
-// Records the terms accepted at sign-up (best effort; retried at the next log-in if it fails).
+// Records what was chosen at sign-up: the terms version accepted and the email list box.
+// Best effort; if it fails it is retried at the next log-in.
 function syncTerms(user) {
   try {
     const p = JSON.parse(localStorage.getItem("tc-terms-pending") || "null");
     if (!p || !user.email || p.email !== user.email.toLowerCase()) return;
-    apiFetch("/api/terms-acceptance", { method: "POST", body: { version: p.version } })
-      .then(() => localStorage.removeItem("tc-terms-pending"))
-      .catch(e => logError("terms-sync", e, { level: "warn" }));
+    (async () => {
+      await apiFetch("/api/terms-acceptance", { method: "POST", body: { version: p.version } });
+      if (p.emailList) await apiFetch("/api/email-list", { method: "PUT", body: { subscribed: true } });
+      localStorage.removeItem("tc-terms-pending");
+      if (p.emailList) loadMailPref();
+    })().catch(e => logError("terms-sync", e, { level: "warn" }));
   } catch (e) {}
 }
+// The email list choice on the logged-in page, so it can be turned off later.
+async function loadMailPref() {
+  const wrap = document.getElementById("mail-pref-wrap");
+  if (!accountMode()) { wrap.hidden = true; return; }
+  try {
+    const r = await apiFetch("/api/email-list");
+    document.getElementById("mail-pref").checked = !!r.subscribed;
+    wrap.hidden = false;
+  } catch (e) { wrap.hidden = true; logError("load-email-list", e, { level: "warn" }); }
+}
+document.getElementById("mail-pref").addEventListener("change", async e => {
+  const box = e.target, msg = document.getElementById("mail-pref-msg"), want = box.checked;
+  msg.textContent = "";
+  try {
+    await apiFetch("/api/email-list", { method: "PUT", body: { subscribed: want } });
+    msg.textContent = want ? "You\u2019re on the email list." : "You\u2019ve been removed from the email list.";
+  } catch (err) { box.checked = !want; msg.textContent = "Couldn\u2019t save that. Try again."; logError("save-email-list", err, { level: "warn" }); }
+});
 async function sessionRequest() {
   if (!needsAuthLib()) return null;
   const sb = await loadSupabase();
@@ -1263,6 +1288,8 @@ function renderLoginPage() {
   if (li) {
     document.getElementById("login-title").textContent = "You\u2019re logged in";
     document.getElementById("loggedin-msg").textContent = "Signed in as " + currentUser.email + ".";
+    document.getElementById("mail-pref-msg").textContent = "";
+    loadMailPref();
   } else {
     setAuthMode("login");
   }
@@ -1328,6 +1355,7 @@ function initTermsGate() {
   if (!box.firstChild) box.innerHTML = document.getElementById("terms-content").innerHTML;
   const agree = document.getElementById("agree");
   agree.checked = false;
+  document.getElementById("mail-opt").checked = false;
   termsRead = false;
   box.scrollTop = 0;
   updateTermsGate();
@@ -1397,7 +1425,7 @@ document.getElementById("auth-form").addEventListener("submit", async e => {
   if (signup && !document.getElementById("agree").checked) return authMsg("Read the Terms of Service to the end and check the box to create an account.");
   authMsg("");
   try {
-    const user = await authRequest(authMode, { email: emailEl.value.trim(), password: passEl.value, termsAccepted: signup ? true : undefined, termsVersion: signup ? TERMS_VERSION : undefined });
+    const user = await authRequest(authMode, { email: emailEl.value.trim(), password: passEl.value, termsAccepted: signup ? true : undefined, termsVersion: signup ? TERMS_VERSION : undefined, emailList: signup ? document.getElementById("mail-opt").checked : undefined });
     if (user.pending) { authMsg("Almost done. Check your email and open the link we sent to confirm your account, then log in."); return; }
     toast(signup ? "Your account is ready." : "You\u2019re logged in.");
     location.hash = "#";

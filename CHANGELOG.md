@@ -9,6 +9,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Front end connected to the backend:** Supabase sign-up, log-in, log-out, session restore, email confirmation and password reset (with a new-password form); favorites and votes saved to the account; activities and their ranking loaded from the API (with the built-in list as a fallback); account deletion; accepted-terms recording; music setting sync; error log sent to `/api/log`. Fill in `TC_CONFIG` (`apiBase`, `supabaseUrl`, `supabaseAnonKey`) to switch it on; left empty, the page runs in local mode as before.
 
+### Added (email list)
+- **Email list checkbox at sign-up:** an optional, unchecked-by-default "Email me occasional updates" box on the create-account form, available before the terms are read. The choice is saved to a new `email_list` table (`schema_additions.sql`) with the date of consent, and a matching checkbox on the logged-in page lets people unsubscribe. New `GET`/`PUT /api/email-list` endpoints; the row is removed when an account is deleted. If email confirmation is on, the choice is kept until the first log-in.
+
 ### Added (music)
 - **Default background music:** a quiet ambient loop (`ambient1-hum-pan`, re-encoded to 64 kbps and embedded in the page) fades in on the first tap, click or key press, because browsers block audio before that. The existing sound button turns it and the other sounds on or off, and the choice is remembered. It pauses while the tab is hidden. This makes the page about 2 MB.
 
