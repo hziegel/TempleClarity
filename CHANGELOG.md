@@ -16,6 +16,8 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **About page wording:** the privacy sentence no longer says no personal information is stored; it now says only an email address, favorites and votes (for accounts) and the email address (for the email list) are kept.
 
+- **Follow the developer:** a new section on the About page with a link to the Simply Joyful Designs YouTube channel (opens in a new tab).
+
 ### Added (music)
 - **Default background music:** a quiet ambient loop (`ambient1-hum-pan`, re-encoded to 64 kbps and embedded in the page) fades in on the first tap, click or key press, because browsers block audio before that. The existing sound button turns it and the other sounds on or off, and the choice is remembered. It pauses while the tab is hidden. This makes the page about 2 MB.
 
