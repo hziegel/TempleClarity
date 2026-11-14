@@ -34,6 +34,16 @@ CREATE TABLE IF NOT EXISTS email_list (
   updated_at   timestamp NOT NULL DEFAULT now()
 );
 
+-- Email list sign-ups from the form on the "What's this?" page, for people without an account.
+-- Only an email address is kept (lower case), with when they opted in. Combine with email_list
+-- (people who ticked the box at sign-up) when sending, and skip duplicates.
+CREATE TABLE IF NOT EXISTS email_subscribers (
+  email        varchar(254) PRIMARY KEY,
+  subscribed   boolean NOT NULL DEFAULT true,
+  consented_at timestamp NOT NULL DEFAULT now(),
+  updated_at   timestamp NOT NULL DEFAULT now()
+);
+
 -- schema.sql recreates the public schema, which on Supabase drops its default access
 -- for the built-in roles. Give them back the basic right to see the schema (the tables
 -- themselves stay locked by the row level security below).

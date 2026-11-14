@@ -73,6 +73,15 @@ export const Q = {
       updated_at   = now()
     RETURNING subscribed`,
 
+  // Anyone, no account: the form on the About page. Adding an address twice changes nothing.
+  subscriberUpsert: `
+    INSERT INTO email_subscribers (email, subscribed, consented_at, updated_at)
+    VALUES ($1, true, now(), now())
+    ON CONFLICT (email) DO UPDATE SET
+      consented_at = CASE WHEN email_subscribers.subscribed THEN email_subscribers.consented_at ELSE now() END,
+      subscribed   = true,
+      updated_at   = now()`,
+
   // ---- favorites, upvotes, downvotes (three tables) --------------------------------------
   reactionsForUser: `
     SELECT activity_id, true AS fav, NULL::text AS vote FROM favorites WHERE user_id = $1

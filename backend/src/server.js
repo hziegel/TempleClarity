@@ -197,6 +197,18 @@ export function createServer({ db, supabase, config }) {
     return { status: 200, body: { subscribed: row.subscribed } };
   });
 
+  // Email list form on the About page. No account needed. The answer is the same whether or not
+  // the address was already on the list, so it can't be used to check who is subscribed.
+  route("POST", "/api/subscribe", async ({ req, ip }) => {
+    limit(`sub:${ip}`, config.subscribeLimitPerHour ?? 5, 60 * 60_000);
+    const b = await readJson(req);
+    if (b.website) return { status: 204 };                       // hidden field only bots fill in
+    const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
+    if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new ApiError(400, "Enter a valid email address.");
+    await db.query(Q.subscriberUpsert, [email]);
+    return { status: 204 };
+  });
+
   route("GET", "/api/reactions", async ({ req }) => {
     const user = await requireLocalUser(req);
     const { rows } = await db.query(Q.reactionsForUser, [user.localId]);

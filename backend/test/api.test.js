@@ -12,7 +12,7 @@ const ACTS = [
   { id: 4, title: "D", description: "d", min_minutes: 10, max_minutes: 30, genres: [], emotions: ["Calm"], scores: { Calm: 95 } }, // spans short and medium
 ];
 function makeDb() {
-  const st = { links: new Map(), users: new Map(), profiles: new Map(), mail: new Map(), favs: [], ups: [], downs: [], logs: [], nextId: 100 };
+  const st = { links: new Map(), users: new Map(), profiles: new Map(), mail: new Map(), subs: new Map(), favs: [], ups: [], downs: [], logs: [], nextId: 100 };
   const act = (a, emotion) => ({ ...a, screen_only: false, group_only: false, requires_supplies: false, relevance: emotion ? a.scores[emotion] ?? null : null });
   const mine = (arr, uid, aid) => arr.some((r) => r.user_id === uid && r.activity_id === aid);
   const drop = (name, uid, aid) => { st[name] = st[name].filter((r) => !(r.user_id === uid && (aid == null || r.activity_id === aid))); };
@@ -54,6 +54,7 @@ function makeDb() {
       case Q.deleteUpvotes: drop("ups", p[0]); return { rows: [] };
       case Q.deleteDownvotes: drop("downs", p[0]); return { rows: [] };
       case Q.deleteUserAbilities: case Q.deleteSiteEvents: return { rows: [] };
+      case Q.subscriberUpsert: st.subs.set(p[0], true); return { rows: [] };
       case Q.emailListGet: return { rows: st.mail.has(p[0]) ? [{ subscribed: st.mail.get(p[0]) }] : [] };
       case Q.emailListSet: st.mail.set(p[0], p[1]); return { rows: [{ subscribed: p[1] }] };
       case Q.deleteEmailList: st.mail.delete(p[0]); return { rows: [] };
@@ -83,7 +84,7 @@ function makeSupabase() {
 let server, base, db, sb;
 before(async () => {
   db = makeDb(); sb = makeSupabase();
-  server = createServer({ db, supabase: sb, config: { allowedOrigins: ["https://templeclarity.com"], trustProxy: false, serveStatic: false, recommenderTemperature: 0 } });
+  server = createServer({ db, supabase: sb, config: { allowedOrigins: ["https://templeclarity.com"], trustProxy: false, serveStatic: false, recommenderTemperature: 0, subscribeLimitPerHour: 20 } });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -269,4 +270,21 @@ test("deleting the account removes the email list row", async () => {
   assert.equal(db.st.mail.has(id), true);
   assert.equal((await call("DELETE", "/api/account", { token: "good-token", body: { password: "right-password" } })).status, 204);
   assert.equal(db.st.mail.has(id), false);
+});
+
+test("subscribe form: no account needed, cleans the address, same answer for repeats, rejects bad input", async () => {
+  const sub = (body, ip) => call("POST", "/api/subscribe", { body, headers: ip ? { "x-forwarded-for": ip } : undefined });
+  assert.equal((await sub({ email: "  Fan@Example.COM " })).status, 204);
+  assert.equal((await sub({ email: "fan@example.com" })).status, 204);
+  assert.deepEqual([...db.st.subs.keys()], ["fan@example.com"]);
+  for (const bad of [{}, { email: "" }, { email: "nope" }, { email: "a@b" }, { email: 5 }, { email: "a@b.co ".repeat(60) }]) assert.equal((await sub(bad)).status, 400, JSON.stringify(bad).slice(0, 30));
+  assert.equal((await sub({ email: "bot@example.com", website: "http://spam" })).status, 204);
+  assert.equal(db.st.subs.has("bot@example.com"), false, "the hidden field catches bots");
+});
+
+test("subscribe form is rate limited per address of the caller", async () => {
+  let n = 0, status;
+  do { status = (await call("POST", "/api/subscribe", { body: { email: `p${n++}@example.com` } })).status; } while (status === 204 && n < 40);
+  assert.equal(status, 429);
+  assert.ok(n > 5 && n <= 21, `limited after ${n} tries`);
 });

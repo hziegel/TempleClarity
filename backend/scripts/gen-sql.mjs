@@ -55,6 +55,11 @@ check("opted out, row kept", `(SELECT NOT subscribed AND consented_at IS NOT NUL
 run(Q.emailListSet, [":u_id", "true"]);
 check("opted back in", `(SELECT subscribed FROM email_list WHERE user_id = :u_id)`);
 
+// ---- email list form (no account) ------------------------------------------------------------
+run(Q.subscriberUpsert, ["fan@example.com"]);
+run(Q.subscriberUpsert, ["fan@example.com"]);
+check("subscriber stored once", `(SELECT count(*) = 1 AND bool_and(subscribed) FROM email_subscribers WHERE email = 'fan@example.com')`);
+
 // ---- favorites and votes -------------------------------------------------------------------
 run(Q.lockUser, [":u_id"]);
 run(Q.favInsert, [":u_id", "1"]);
