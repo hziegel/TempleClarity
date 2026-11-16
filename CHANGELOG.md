@@ -20,6 +20,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Search filter "Show":** a dropdown on the search screen (All, Favorites, Upvotes) that narrows results to the person's own favorites or upvoted activities. It combines with the name, genre and time filters and is cleared by "Clear filters".
 
+### Fixed
+- **Emotion names are matched ignoring capitalization:** the database keeps emotion names in lower case (`happy`, `calm`…) while the site sends `Calm`; the activities query and the page's built-in fallback now compare without regard to case, so the relevance scores take effect. `test/sql.sh` adds the lower-case emotions itself because `seed.sql` leaves that table to be filled by hand, and its time-window checks now compare against the data instead of fixed counts.
+
 ### Added (music)
 - **Default background music:** a quiet ambient loop (`ambient1-hum-pan`, re-encoded to 64 kbps and embedded in the page) fades in on the first tap, click or key press, because browsers block audio before that. The existing sound button turns it and the other sounds on or off, and the choice is remembered. It pauses while the tab is hidden. This makes the page about 2 MB.
 

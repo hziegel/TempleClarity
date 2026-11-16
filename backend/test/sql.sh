@@ -8,6 +8,8 @@ cd "$(dirname "$0")/.."
 P="psql $DATABASE_URL -v ON_ERROR_STOP=1 -q -X"
 
 $P -f schema.sql -f schema_additions.sql
+# seed.sql leaves the emotions table alone (the names are entered by hand, in lower case), so add them here.
+$P -c "INSERT INTO emotions (title) VALUES ('happy'),('sad'),('mad'),('scared'),('bored'),('tired'),('nervous'),('calm') ON CONFLICT (title) DO NOTHING"
 $P -f seed.sql
 COUNTS=$($P -Atc "SELECT (SELECT count(*) FROM activity_genres) || ',' || (SELECT count(*) FROM activity_emotions)")
 $P -f seed.sql                                  # re-running the seed must not add anything

@@ -685,7 +685,8 @@ async function getRankedActivities(emotion, bucket) {
     } catch (e) { logError("activities", e, { level: "warn" }); }
   }
   const pool = bucket ? ACTIVITIES.filter(a => a.bucket === bucket) : ACTIVITIES;
-  const tagged = emotion ? pool.filter(a => a.emotions.includes(emotion)) : [];
+  const em = emotion ? emotion.toLowerCase() : "";   // the database stores emotion names in lower case
+  const tagged = em ? pool.filter(a => a.emotions.some(x => x.toLowerCase() === em)) : [];
   return tagged.length ? tagged : pool;
 }
 async function nextFromQueue(emotion, bucket) {

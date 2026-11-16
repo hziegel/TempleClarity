@@ -2,7 +2,7 @@
 // Written for the tables in schema.sql plus supabase_users and error_logs from schema_additions.sql.
 
 // Shared by the activity queries: one row per published activity with its genres, emotions
-// and times in minutes. $1 = emotion title (or NULL), used only to sort by relevance_score.
+// and times in minutes. $1 = emotion title (or NULL, capitalization ignored), used only to sort by relevance_score.
 const ACTIVITY_COLUMNS = `
   a.id, a.title, a.description,
   (EXTRACT(EPOCH FROM a.min_time) / 60)::float8 AS min_minutes,
@@ -16,7 +16,7 @@ const ACTIVITY_COLUMNS = `
             WHERE ae.activity_id = a.id), '{}') AS emotions,
   (SELECT max(ae.relevance_score)
    FROM activity_emotions ae JOIN emotions e ON e.id = ae.emotion_id
-   WHERE ae.activity_id = a.id AND e.title = $1) AS relevance`;
+   WHERE ae.activity_id = a.id AND lower(e.title) = lower($1)) AS relevance`;
 
 export const Q = {
   // $1 emotion, $2 / $3 = lowest / highest minutes of the time window (both NULL for "any").

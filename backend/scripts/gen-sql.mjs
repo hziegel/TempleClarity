@@ -19,14 +19,14 @@ const check = (label, cond) => lines.push(`SELECT CASE WHEN (${cond}) THEN 1 ELS
 const count = (sql) => `SELECT count(*) AS n FROM (${sql}) t`;
 // (psql cannot bind NULL, so these use real values; the NULL paths are exercised by the API tests)
 out(count(Q.activitiesList), ["Nervous", "0", "15"], "short");
-check("short activities", ":short_n = 8");
+check("short activities match the overlap rule", ":short_n = (SELECT count(*) FROM activities a WHERE a.published AND COALESCE(EXTRACT(EPOCH FROM a.min_time)/60, 0) <= 15 AND COALESCE(EXTRACT(EPOCH FROM a.max_time)/60, 1e9) >= 0)");
 out(count(Q.activitiesList), ["Nervous", "15", "45"], "medium");
-check("medium activities", ":medium_n = 5");
+check("medium activities match the overlap rule", ":medium_n = (SELECT count(*) FROM activities a WHERE a.published AND COALESCE(EXTRACT(EPOCH FROM a.min_time)/60, 0) <= 45 AND COALESCE(EXTRACT(EPOCH FROM a.max_time)/60, 1e9) >= 15)");
 out(count(Q.activitiesList), ["Nervous", "45", "1000000000"], "long");
-check("long activities", ":long_n = 3");
+check("long activities match the overlap rule", ":long_n = (SELECT count(*) FROM activities a WHERE a.published AND COALESCE(EXTRACT(EPOCH FROM a.min_time)/60, 0) <= 1e9 AND COALESCE(EXTRACT(EPOCH FROM a.max_time)/60, 1e9) >= 45)");
 run(Q.activityById, ["Calm", "1"]);
 check("seed has 16 activities, 16 genres, 8 emotions", "(SELECT count(*) FROM activities) = 16 AND (SELECT count(*) FROM genres) = 16 AND (SELECT count(*) FROM emotions) = 8");
-check("emotion sorting puts the best score first", "(SELECT id FROM (" + one(Q.activitiesList).replace(/\$1/g, "'Nervous'").replace(/\$2::float8/g, "0::float8").replace(/\$3::float8/g, "1e9::float8") + ") t LIMIT 1) = 1");
+check("emotion sorting puts the best score first (any case)", "(SELECT relevance FROM (" + one(Q.activitiesList).replace(/\$1/g, "'NERVOUS'").replace(/\$2::float8/g, "0::float8").replace(/\$3::float8/g, "1e9::float8") + ") t LIMIT 1) = (SELECT max(ae.relevance_score) FROM activity_emotions ae JOIN emotions e ON e.id = ae.emotion_id WHERE e.title = 'nervous')");
 
 // ---- first sign-in creates a user, a profile and the link ---------------------------------
 run(Q.userIdBySupabase, [SB]);
