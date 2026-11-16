@@ -20,6 +20,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Search filter "Show":** a dropdown on the search screen (All, Favorites, Upvotes) that narrows results to the person's own favorites or upvoted activities. It combines with the name, genre and time filters and is cleared by "Clear filters".
 
+### Changed (built-in activities)
+- **The page's built-in activity list now matches `seed.sql`** (your 16 real activities, genres and scores), used when the API isn't connected or can't be reached. Times are now ranges, so cards and search results show "1\u201330 minutes" instead of "About 30 minutes" (a fixed time still reads "About 5 minutes"). Time choices and the search time filters use the same overlap rule as the server, and the fallback ranks by the scores like the API does (without the shuffle).
+
 ### Fixed
 - **Emotion names are matched ignoring capitalization:** the database keeps emotion names in lower case (`happy`, `calm`…) while the site sends `Calm`; the activities query and the page's built-in fallback now compare without regard to case, so the relevance scores take effect. `test/sql.sh` adds the lower-case emotions itself because `seed.sql` leaves that table to be filled by hand, and its time-window checks now compare against the data instead of fixed counts.
 

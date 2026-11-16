@@ -647,31 +647,44 @@ document.querySelectorAll(".pick").forEach(b => b.onclick = () => {
 // can't be reached, the bundled list below is used instead.
 // ---------------------------------------------------------------
 const ACTIVITIES = [
-  { id: 1,  bucket: "short",  minutes: 5,  genres: ["Mindful/Meditative","Distress Tolerance"], emotions: ["Nervous","Scared","Mad","Calm"], title: "Box breathing", description: "Breathe in for four counts, hold for four, out for four, hold for four. Repeat a few times, slowly." },
-  { id: 2,  bucket: "short",  minutes: 10, genres: ["Movement","Sensory"], emotions: ["Tired","Bored","Sad"], title: "Stretch by a window", description: "Stand near natural light and stretch your arms, neck and shoulders. Notice what feels good." },
-  { id: 3,  bucket: "short",  minutes: 10, genres: ["Drawing"], emotions: ["Bored","Happy","Nervous"], title: "Doodle a pattern", description: "Grab any pen and paper and fill a small square with a repeating pattern. There is no wrong way." },
-  { id: 4,  bucket: "medium", minutes: 30, genres: ["Food","Sensory","Mindful/Meditative"], emotions: ["Tired","Sad","Calm"], title: "Make a warm drink and sit with it", description: "Brew something warm, find a comfortable spot, and drink it slowly without a screen." },
-  { id: 5,  bucket: "medium", minutes: 30, genres: ["Crafting"], emotions: ["Nervous","Bored","Mad"], title: "Fold a paper crane", description: "Follow a simple origami tutorial. The repeated folds give your hands something steady to do." },
-  { id: 6,  bucket: "medium", minutes: 40, genres: ["Movement","Mindful/Meditative"], emotions: ["Mad","Sad","Scared"], title: "Take a slow walk with no destination", description: "Leave your phone in your pocket and walk at an easy pace. Look for three things you haven't noticed before." },
-  { id: 7,  bucket: "long",   minutes: 60, genres: ["Drawing","Crafting"], emotions: ["Bored","Happy","Calm","Sad"], title: "Try a beginner watercolor tutorial", description: "Pick a simple painting to follow along with. Let it be imperfect." },
-  { id: 8,  bucket: "long",   minutes: 60, genres: ["Mindful/Meditative","Auditory"], emotions: ["Scared","Nervous","Tired"], title: "Listen to a guided meditation", description: "Lie down or sit comfortably and follow a longer guided body-scan or relaxation recording." },
-  { id: 9,  bucket: "long",   minutes: 90, genres: ["Food","Productive"], emotions: ["Happy","Bored","Calm"], title: "Cook something simple from scratch", description: "Choose an easy recipe and take your time with it. Enjoy the smells and the chopping." },
-  { id: 10, bucket: "short",  minutes: 10, genres: ["Writing"], emotions: ["Sad","Calm","Happy","Bored"], title: "Write down three things you noticed today", description: "They can be tiny: a color, a sound, a taste. Write a sentence about each." },
-  { id: 11, bucket: "short",  minutes: 10, genres: ["Reading"], emotions: ["Tired","Calm","Sad","Nervous"], title: "Read one page of something you love", description: "Pick a favorite book or a short poem and read a single page slowly." },
-  { id: 12, bucket: "short",  minutes: 5,  genres: ["Vocal"], emotions: ["Nervous","Mad","Happy","Bored"], title: "Hum along to a song you like", description: "Hum or sing softly and feel the vibration in your chest. Nobody has to hear it." },
-  { id: 13, bucket: "medium", minutes: 30, genres: ["Game"], emotions: ["Bored","Nervous","Mad"], title: "Play a round of solitaire", description: "Shuffle a deck of cards and play one slow game, or do a small jigsaw puzzle instead." },
-  { id: 14, bucket: "short",  minutes: 5,  genres: ["Silly","Movement"], emotions: ["Happy","Bored","Mad","Sad"], title: "Dance around the room badly on purpose", description: "Put on any music and move in the silliest way you can think of until you smile." },
-  { id: 15, bucket: "medium", minutes: 30, genres: ["Activity Sheet","Drawing"], emotions: ["Bored","Tired","Nervous","Calm"], title: "Color in a printable activity sheet", description: "Print or open a coloring page or a simple puzzle sheet and fill it in at your own pace." },
-  { id: 16, bucket: "short",  minutes: 10, genres: ["Social","Writing"], emotions: ["Sad","Tired","Happy"], title: "Send a kind message to someone", description: "Think of someone you haven't talked to in a while and send them a short, warm note." }
+  { id: 1, minMinutes: 0.5, maxMinutes: 10, minutes: 10, genres: ["Mindful/Meditative", "Sensory"], emotions: ["mad", "nervous", "scared", "sad", "calm", "happy"], scores: {"happy": 10, "sad": 30, "mad": 80, "scared": 40, "nervous": 80, "calm": 30}, title: "Focus on small object", description: "Find a small object which fits easily in your hand such as a tiny rock, paper clip, seashell or bracelet. Close your eyes and feel the weight and texture in your hand. Open your eyes and admire the shapes and colors from all angles. Let the small object fascinate you as everything else melts away." },
+  { id: 2, minMinutes: 1, maxMinutes: 10, minutes: 10, genres: ["Mindful/Meditative", "Distress Tolerance"], emotions: ["nervous", "mad", "scared", "sad", "bored"], scores: {"sad": 20, "mad": 80, "scared": 80, "bored": 20, "nervous": 89}, title: "Count something in the room", description: "Find something which there are many of such as leaves on a branch or books on a shelf and count how many you see." },
+  { id: 3, minMinutes: 1, maxMinutes: 30, minutes: 30, genres: ["Mindful/Meditative", "Distress Tolerance"], emotions: ["nervous", "mad", "scared"], scores: {"mad": 90, "scared": 80, "nervous": 100}, title: "Breathing exercise", description: "Concentrate on breathing slowly in and out" },
+  { id: 4, minMinutes: 5, maxMinutes: 60, minutes: 60, genres: ["Mindful/Meditative", "Distress Tolerance", "Auditory"], emotions: ["mad", "scared", "nervous", "happy", "sad", "bored", "calm"], scores: {"happy": 20, "sad": 20, "mad": 80, "scared": 80, "bored": 20, "nervous": 80, "calm": 20}, title: "ASMR", description: "Listen to some relaxing sounds" },
+  { id: 5, minMinutes: 0.5, maxMinutes: 1, minutes: 1, genres: ["Mindful/Meditative", "Distress Tolerance"], emotions: ["mad", "scared", "nervous"], scores: {"mad": 90, "scared": 90, "nervous": 90}, title: "Count backwards from 100", description: "As you count backward, feel your body start to relax and slow down" },
+  { id: 6, minMinutes: 0.5, maxMinutes: 5, minutes: 5, genres: ["Distress Tolerance", "Vocal"], emotions: ["mad", "scared", "nervous"], scores: {"mad": 100, "scared": 20, "nervous": 20}, title: "Scream into a pillow", description: "The pillow will understand" },
+  { id: 7, minMinutes: 0.5, maxMinutes: 5, minutes: 5, genres: ["Distress Tolerance", "Vocal", "Silly"], emotions: ["happy", "bored", "calm", "scared", "nervous", "sad", "tired", "mad"], scores: {"happy": 60, "sad": 30, "mad": 10, "scared": 40, "bored": 60, "tired": 20, "nervous": 40, "calm": 50}, title: "Say a tongue twister", description: "Can you say Peter Piper picked a peck of pickled peppers?" },
+  { id: 8, minMinutes: 0.5, maxMinutes: 10, minutes: 10, genres: ["Mindful/Meditative", "Distress Tolerance"], emotions: ["mad", "scared", "nervous", "sad"], scores: {"sad": 80, "mad": 100, "scared": 100, "nervous": 90}, title: "Name the problem", description: "Sometimes when you're stressed, it's hard to even figure out why. Take a few minutes to put a name to the problem before trying to resolve the feeling." },
+  { id: 9, minMinutes: 0.5, maxMinutes: 1, minutes: 1, genres: ["Distress Tolerance", "Sensory"], emotions: ["nervous", "mad", "tired"], scores: {"mad": 50, "tired": 30, "nervous": 60}, title: "Splash cold water on face", description: "Let yourself feel the sensation of the cool water before drying your face." },
+  { id: 10, minMinutes: 10, maxMinutes: 60, minutes: 60, genres: ["Distress Tolerance", "Movement"], emotions: ["mad", "nervous", "happy", "scared", "bored", "calm", "sad", "tired"], scores: {"happy": 50, "sad": 20, "mad": 80, "scared": 50, "bored": 50, "tired": 20, "nervous": 60, "calm": 50}, title: "High intensity exercise", description: "Sometimes working out can be the perfect distraction" },
+  { id: 11, minMinutes: 0.5, maxMinutes: 5, minutes: 5, genres: ["Distress Tolerance", "Movement"], emotions: ["mad", "scared", "nervous"], scores: {"mad": 80, "scared": 80, "nervous": 80}, title: "Tense and relax muscles", description: "Tense your muscles and then slowly release. Feel all that tension go away. Repeat as many times as you like." },
+  { id: 12, minMinutes: 0.5, maxMinutes: 10, minutes: 10, genres: ["Distress Tolerance"], emotions: ["nervous", "mad", "sad", "scared"], scores: {"sad": 60, "mad": 70, "scared": 50, "nervous": 90}, title: "Radical acceptance", description: "Accept the reality of the situation, even if you don't like it" },
+  { id: 13, minMinutes: 5, maxMinutes: 60, minutes: 60, genres: ["Distress Tolerance", "Drawing", "Crafting"], emotions: ["happy", "bored", "calm", "nervous", "scared", "sad", "mad", "tired"], scores: {"happy": 90, "sad": 50, "mad": 40, "scared": 60, "bored": 90, "tired": 40, "nervous": 70, "calm": 90}, title: "Stamp art", description: "Use a stamp with paint on paper or make a stamp from household items" },
+  { id: 14, minMinutes: 1, maxMinutes: 30, minutes: 30, genres: ["Distress Tolerance", "Drawing"], emotions: ["happy", "bored", "calm", "nervous", "sad", "mad", "scared", "tired"], scores: {"happy": 100, "sad": 30, "mad": 20, "scared": 20, "bored": 100, "tired": 10, "nervous": 60, "calm": 100}, title: "Draw something step by step", description: "Learn how to draw something with a simple tutorial" },
+  { id: 15, minMinutes: 15, maxMinutes: 720, minutes: 720, genres: ["Distress Tolerance", "Drawing"], emotions: ["happy", "bored", "calm", "nervous", "sad", "mad", "scared", "tired"], scores: {"happy": 100, "sad": 30, "mad": 20, "scared": 20, "bored": 100, "tired": 10, "nervous": 60, "calm": 100}, title: "Draw something from reference", description: "Look up reference and practice drawing objects, animals or landscapes" },
+  { id: 16, minMinutes: 5, maxMinutes: 60, minutes: 60, genres: ["Distress Tolerance", "Crafting"], emotions: ["happy", "bored", "calm", "nervous", "sad", "mad", "scared", "tired"], scores: {"happy": 100, "sad": 30, "mad": 20, "scared": 20, "bored": 100, "tired": 10, "nervous": 60, "calm": 100}, title: "Origami", description: "Practice the relaxing art of folding paper" }
 ];
 const GENRES = ["Mindful/Meditative","Distress Tolerance","Drawing","Crafting","Writing","Reading","Activity Sheet","Vocal","Auditory","Sensory","Movement","Silly","Productive","Game","Food","Social"];
 let seenIdeas = [];
 // Ordered queue so "Try another" never repeats until every option has been shown.
 let ideaQueue = [], ideaLast = null;
+const BUCKET_RANGES = { short: [0, 15], medium: [15, 45], long: [45, 1e9] };
+// "About 5 minutes" for a fixed time, otherwise a range such as "1\u201330 minutes" or "30 seconds\u20131 minute".
+function fmtDur(m) {
+  if (m < 1) { const s = Math.round(m * 60); return s + (s === 1 ? " second" : " seconds"); }
+  if (m >= 60 && m % 60 === 0) { const h = m / 60; return h + (h === 1 ? " hour" : " hours"); }
+  const r = Math.round(m); return r + (r === 1 ? " minute" : " minutes");
+}
+function timeText(a) {
+  const lo = a.minMinutes, hi = a.maxMinutes;
+  if (lo === hi || lo == null) return "About " + fmtDur(hi ?? a.minutes);
+  const l = fmtDur(lo), h = fmtDur(hi);
+  const lu = l.replace(/^[\d.]+ /, "").replace(/s$/, ""), hu = h.replace(/^[\d.]+ /, "").replace(/s$/, "");
+  return (lu === hu ? l.replace(/ .*/, "") : l) + "\u2013" + h;
+}
 function mapApiActivity(a) {
-  const minutes = a.minutes ?? a.minMinutes ?? 0;
-  return { id: a.id, title: a.title, description: a.description || "", minutes,
-           bucket: minutes <= 15 ? "short" : minutes <= 45 ? "medium" : "long",
+  const maxM = a.maxMinutes ?? a.minutes ?? 0, minM = a.minMinutes ?? maxM;
+  return { id: a.id, title: a.title, description: a.description || "", minMinutes: minM, maxMinutes: maxM, minutes: maxM,
            genres: a.genres || [], emotions: a.emotions || [] };
 }
 async function getRankedActivities(emotion, bucket) {
@@ -684,9 +697,12 @@ async function getRankedActivities(emotion, bucket) {
       if (r.activities.length) return r.activities.map(mapApiActivity);
     } catch (e) { logError("activities", e, { level: "warn" }); }
   }
-  const pool = bucket ? ACTIVITIES.filter(a => a.bucket === bucket) : ACTIVITIES;
+  // Same rules as the server: a time choice matches when the activity's range overlaps it.
+  const w = bucket ? BUCKET_RANGES[bucket] : null;
+  const pool = w ? ACTIVITIES.filter(a => a.minMinutes <= w[1] && a.maxMinutes >= w[0]) : ACTIVITIES;
   const em = emotion ? emotion.toLowerCase() : "";   // the database stores emotion names in lower case
-  const tagged = em ? pool.filter(a => a.emotions.some(x => x.toLowerCase() === em)) : [];
+  const score = a => (a.scores && a.scores[em]) || (a.emotions.some(x => x.toLowerCase() === em) ? 1 : 0);
+  const tagged = em ? pool.filter(a => score(a) > 0).sort((a, b) => score(b) - score(a) || a.id - b.id) : [];
   return tagged.length ? tagged : pool;
 }
 async function nextFromQueue(emotion, bucket) {
@@ -718,7 +734,7 @@ function fillActivity(a) {
   currentIdea = a.id;
   document.getElementById("idea-title").textContent = a.title;
   document.getElementById("idea-desc").textContent = a.description;
-  document.getElementById("idea-time").textContent = "About " + a.minutes + " minutes";
+  document.getElementById("idea-time").textContent = timeText(a);
   renderReactions();
 }
 function setContext(text) {
@@ -1011,8 +1027,8 @@ function renderSearch() {
     terms.every(t => hay(a).includes(t)) &&
     (!show || mine(a)) &&
     (!genre || a.genres.includes(genre)) &&
-    (minV === null || a.minutes >= minV) &&
-    (maxV === null || a.minutes <= maxV));
+    (minV === null || a.maxMinutes >= minV) &&
+    (maxV === null || a.minMinutes <= maxV));
   const box = document.getElementById("search-results");
   box.textContent = "";
   list.forEach(a => {
@@ -1022,7 +1038,7 @@ function renderSearch() {
     const t = document.createElement("b"); t.textContent = a.title;
     const d = document.createElement("span"); d.textContent = a.description;
     const g = document.createElement("i"); g.className = "genre"; g.textContent = a.genres.join(", ");
-    const m = document.createElement("i"); m.textContent = "About " + a.minutes + " minutes";
+    const m = document.createElement("i"); m.textContent = timeText(a);
     el.append(t, d, g, m);
     box.appendChild(el);
   });
@@ -1069,7 +1085,7 @@ function pfBuildRow(k, a) {
     link.className = "result";
     link.href = "#activity-" + a.id;
     const t = document.createElement("b"); t.textContent = a.title;
-    const m = document.createElement("i"); m.textContent = "About " + a.minutes + " minutes";
+    const m = document.createElement("i"); m.textContent = timeText(a);
     link.append(t, m);
     const del = document.createElement("button");
     del.className = "pf-del"; del.type = "button"; del.title = "Remove";
