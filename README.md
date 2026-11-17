@@ -18,5 +18,3 @@ The front end is complete. These parts are placeholders waiting for a backend:
 - `getRecommendation()` is the swap point for the real recommender and activity database.
 - `authRequest()`, `sessionRequest()` and `logoutRequest()` are the sign-up, login and session calls. Sign-up sends `termsAccepted` and `termsVersion`.
 - Favorites and votes are stored in the browser (`localStorage`) for now.
-
-Before launch, fill in the two `[YOUR STATE OR COUNTRY]` placeholders in the Terms of Service.
