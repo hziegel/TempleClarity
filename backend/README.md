@@ -27,10 +27,6 @@ browser ──(Supabase JS: sign up / log in)──▶ Supabase Auth
    ```
 3. Check it: `curl localhost:3000/api/health` → `{"ok":true}`.
 
-> **`schema.sql` starts with `DROP SCHEMA public CASCADE`**, which erases every table in the database's `public` schema. `npm run db:setup` therefore refuses to run on a database that already has tables; add `-- --wipe` (`npm run db:setup -- --wipe`) to confirm you want to erase and rebuild. Never point it at a database holding data you want to keep. If you'd rather not drop the schema, delete the first two lines of `schema.sql`. On Supabase, `schema_additions.sql` gives the built-in roles back access to the recreated schema.
-
-`schema.sql` is your file, unchanged. `seed.sql` is safe to run again: it updates activity text but leaves relevance scores and the `published` flag alone.
-
 ### Database files
 
 - `schema.sql`: your schema, exactly as you wrote it.
@@ -51,11 +47,7 @@ Time choices on the front end map to your `min_time` / `max_time`: 0-15 min, 15-
 
 ### Things worth a second look in schema.sql
 
-1. **`users.email` is not unique.** Supabase already enforces unique emails, so this is fine for now.
-2. **`user_profiles.timezone` is a `timestamp`.** A timezone is usually a name like `America/Los_Angeles` (text). The API doesn't use it.
-3. **`terms_version` keeps only the latest version** each person accepted, with no history of earlier ones.
 4. **The seed's emotion scores are placeholders.** The first emotion listed for each activity scores 100, then 90, 80 and so on. Replace them with real scores.
-5. **No indexes on the foreign key columns** (for example `favorites.user_id`). The unique constraints on favorites and votes cover the common lookups, so this is fine at this size.
 
 ## Endpoints
 

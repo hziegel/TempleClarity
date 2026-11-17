@@ -530,8 +530,8 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
 // Leave them empty to run in local mode (activities and favorites stay in this browser).
 const TC_CONFIG = {
   apiBase: "",            // "" = the same site as this page, or e.g. "https://api.templeclarity.com"
-  supabaseUrl: "",        // Supabase: Project Settings > API > Project URL
-  supabaseAnonKey: ""     // Supabase: the public "anon" key. Never put the service_role key here.
+  supabaseUrl: "https://uifpkfeohlcggzalhktl.supabase.co/rest/v1/",        // Supabase: Project Settings > API > Project URL
+  supabaseAnonKey: "sb_publishable_yYbO-hwm3UcZGnlnNJ5tgw_kO2dnRhj"     // Supabase: the public "anon" key. Never put the service_role key here.
 };
 const CONNECTED = !!(TC_CONFIG.supabaseUrl && TC_CONFIG.supabaseAnonKey);
 const ERROR_LOG_ENDPOINT = CONNECTED ? TC_CONFIG.apiBase + "/api/log" : null;
