@@ -84,7 +84,7 @@ function makeSupabase() {
 let server, base, db, sb;
 before(async () => {
   db = makeDb(); sb = makeSupabase();
-  server = createServer({ db, supabase: sb, config: { allowedOrigins: ["https://templeclarity.com"], trustProxy: false, serveStatic: false, recommenderTemperature: 0, subscribeLimitPerHour: 20 } });
+  server = createServer({ db, supabase: sb, config: { allowedOrigins: ["https://templeclarity.com"], trustProxy: false, serveStatic: false, recommenderTemperature: 0, subscribeLimitPerHour: 20, supabaseUrl: "https://abc.supabase.co/rest/v1/", supabaseAnonKey: "sb_publishable_test", supabaseServiceKey: "SECRET-SERVICE-KEY", databaseUrl: "postgres://secret", publicApiBase: "" } });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -287,4 +287,15 @@ test("subscribe form is rate limited per address of the caller", async () => {
   do { status = (await call("POST", "/api/subscribe", { body: { email: `p${n++}@example.com` } })).status; } while (status === 204 && n < 40);
   assert.equal(status, 429);
   assert.ok(n > 5 && n <= 21, `limited after ${n} tries`);
+});
+
+test("config.js gives the browser the public settings only", async () => {
+  const res = await fetch(base + "/config.js");
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type"), /javascript/);
+  assert.equal(res.headers.get("cache-control"), "no-cache");
+  const body = await res.text();
+  const cfg = new Function("window", body + "; return window.TC_CONFIG;")({});
+  assert.deepEqual(cfg, { apiBase: "", supabaseUrl: "https://abc.supabase.co", supabaseAnonKey: "sb_publishable_test" });
+  assert.ok(!body.includes("SECRET") && !body.includes("postgres"), "no secrets in config.js");
 });

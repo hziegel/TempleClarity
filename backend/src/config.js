@@ -1,4 +1,5 @@
 import { DEFAULT_TEMPERATURE } from "./recommender.js";
+import { cleanSupabaseUrl } from "./browser-config.js";
 
 // Reads settings from environment variables. Required values fail fast at startup.
 // How much the recommender shuffles. 0 = never, 1 = scores are weights (default). See src/recommender.js.
@@ -18,12 +19,13 @@ export function loadConfig(env = process.env) {
     port: Number(env.PORT || 3000),
     databaseUrl: need("DATABASE_URL"),
     databaseSsl: env.DATABASE_SSL === "1",
-    supabaseUrl: need("SUPABASE_URL").replace(/\/+$/, ""),
+    supabaseUrl: cleanSupabaseUrl(need("SUPABASE_URL")),
     supabaseAnonKey: need("SUPABASE_ANON_KEY"),
     supabaseServiceKey: need("SUPABASE_SERVICE_ROLE_KEY"),
     allowedOrigins: (env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean),
     trustProxy: env.TRUST_PROXY === "1",
     serveStatic: env.SERVE_STATIC === "1",
+    publicApiBase: (env.PUBLIC_API_BASE || "").trim().replace(/\/+$/, ""),
     recommenderTemperature: temperature(env.RECOMMENDER_TEMPERATURE),
   };
 }

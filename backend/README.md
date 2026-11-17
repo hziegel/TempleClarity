@@ -49,6 +49,20 @@ Time choices on the front end map to your `min_time` / `max_time`: 0-15 min, 15-
 
 4. **The seed's emotion scores are placeholders.** The first emotion listed for each activity scores 100, then 90, 80 and so on. Replace them with real scores.
 
+## Page settings (`/config.js`)
+
+No Supabase address or key is written into `index.html`. When the backend serves the page (`SERVE_STATIC=1`), the page loads `/config.js`, which the backend builds from its `.env`:
+
+| In `.env` | Sent to the browser as |
+| --- | --- |
+| `SUPABASE_URL` | `supabaseUrl` (a trailing `/rest/v1` or `/` is removed automatically) |
+| `SUPABASE_ANON_KEY` | `supabaseAnonKey` (the public key only) |
+| `PUBLIC_API_BASE` | `apiBase` (leave empty when this server also serves the page) |
+
+The service role key and the database URL are never included. Change the `.env`, restart, and the page picks up the new settings, so a test and a production Supabase project only differ in their environment variables. If `/config.js` is missing or empty, the page runs in local mode.
+
+If the page is hosted somewhere else (a plain static host), copy `config.example.js` to `config.js` next to `index.html` and fill in the same three values; `config.js` is in `.gitignore`.
+
 ## Endpoints
 
 | Method | Path | Login | What it does |

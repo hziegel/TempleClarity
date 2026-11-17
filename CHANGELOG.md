@@ -20,6 +20,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Search filter "Show":** a dropdown on the search screen (All, Favorites, Upvotes) that narrows results to the person's own favorites or upvoted activities. It combines with the name, genre and time filters and is cleared by "Clear filters".
 
+### Changed (settings)
+- **Connection settings no longer live in `index.html`.** The backend serves `/config.js` built from its `.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, new `PUBLIC_API_BASE`), and the page reads `window.TC_CONFIG` from it; a static host can use a `config.js` copied from `config.example.js`. The page strips a trailing `/rest/v1` from the Supabase address, which fixes a log-in problem when the REST address is pasted in. With no settings the page stays in local mode. The committed `index.html` has empty settings again.
+
 ### Changed (built-in activities)
 - **The page's built-in activity list now matches `seed.sql`** (your 16 real activities, genres and scores), used when the API isn't connected or can't be reached. Times are now ranges, so cards and search results show "1\u201330 minutes" instead of "About 30 minutes" (a fixed time still reads "About 5 minutes"). Time choices and the search time filters use the same overlap rule as the server, and the fallback ranks by the scores like the API does (without the shuffle).
 

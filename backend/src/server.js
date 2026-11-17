@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { Q } from "./queries.js";
 import { recommend, DEFAULT_TEMPERATURE } from "./recommender.js";
+import { browserConfigScript } from "./browser-config.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STATIC_FILES = {
@@ -333,6 +334,10 @@ export function createServer({ db, supabase, config }) {
       const ip = clientIp(req);
       if (req.method === "OPTIONS") return send(res, 204);
       limit(`ip:${ip}`, 300, 60_000);
+      if (req.method === "GET" && url.pathname === "/config.js") {
+        res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-cache" });
+        return res.end(browserConfigScript(config));
+      }
       if (config.serveStatic && req.method === "GET" && (await serveStatic(url.pathname, res))) return;
       for (const r of routes) {
         if (r.method !== req.method) continue;
