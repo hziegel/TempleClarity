@@ -1,0 +1,13 @@
+# Keep secrets and clutter out of the image.
+.git
+.gitignore
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+config.js
+**/*.md
+SEO.md
+Dockerfile
+docker-compose*.yml
+docker

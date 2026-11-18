@@ -48,6 +48,22 @@ Time choices on the front end map to your `min_time` / `max_time`: 0-15 min, 15-
 
 4. **The seed's emotion scores are placeholders.** The first emotion listed for each activity scores 100, then 90, 80 and so on. Replace them with real scores.
 
+## Docker
+
+The `Dockerfile`, `docker-compose.yml` and `docker-compose.localdb.yml` at the repo root run the API, which also serves the web page, in a container. Install Docker, then from the repo root:
+
+```sh
+cp backend/.env.example backend/.env      # fill it in, as for running without Docker
+docker compose up --build                 # then open http://localhost:3000
+```
+
+- Settings come from `backend/.env` when the container starts. The file is **not** copied into the image (`.dockerignore`), so the image holds no keys. On a host, set the same variables in its settings instead.
+- Inside Docker, `DATABASE_URL` must be an address the container can reach: Supabase's connection string works as is. A Postgres running on your own computer is `host.docker.internal`, not `localhost`.
+- `docker compose logs -f api` shows the server's output, and `docker compose ps` shows its health (it checks `/api/health`).
+- To test with a throwaway Postgres instead of your Supabase database: `docker compose -f docker-compose.yml -f docker-compose.localdb.yml up --build`. The first start loads `schema.sql`, `schema_additions.sql`, the 8 emotions (`docker/emotions.sql`) and `seed.sql`. Add `down -v` to the command to erase it and start over. Sign-in still uses Supabase.
+- Commit `backend/package-lock.json` (created by `npm install`) so the image installs exactly the versions you tested; the Dockerfile uses it automatically.
+- To put it on a host: `docker build -t temple-clarity .`, push the image to a registry, and run it with the environment variables set and port 3000 behind HTTPS (or let the host's proxy handle that, with `TRUST_PROXY=1`).
+
 ## Page settings (`/config.js`)
 
 No Supabase address or key is written into `index.html`. When the backend serves the page (`SERVE_STATIC=1`), the page loads `/config.js`, which the backend builds from its `.env`:

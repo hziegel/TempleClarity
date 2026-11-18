@@ -1,0 +1,17 @@
+# Runs the Temple Clarity API (and the web page) in a container, using your Supabase project.
+#   1. cp backend/.env.example backend/.env   and fill it in (DATABASE_URL, SUPABASE_*, ...)
+#   2. docker compose up --build
+#   3. open http://localhost:3000
+# To use a throwaway Postgres in Docker instead of Supabase's database, see docker-compose.localdb.yml.
+services:
+  api:
+    build: .
+    image: temple-clarity
+    ports:
+      - "3000:3000"
+    env_file:
+      - backend/.env          # real values stay out of the image
+    environment:
+      PORT: "3000"            # the port inside the container
+      SERVE_STATIC: "1"       # the API also serves the web page
+    restart: unless-stopped
