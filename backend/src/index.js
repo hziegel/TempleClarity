@@ -1,8 +1,10 @@
+import { loadDotEnv } from "./env.js";
 import { loadConfig } from "./config.js";
 import { createDb } from "./db.js";
 import { createSupabase } from "./supabase.js";
 import { createServer } from "./server.js";
 
+loadDotEnv();                       // reads backend/.env if it exists
 const config = loadConfig();
 const db = createDb(config);
 const supabase = createSupabase(config);

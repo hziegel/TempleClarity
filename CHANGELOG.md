@@ -20,6 +20,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 - **Search filter "Show":** a dropdown on the search screen (All, Favorites, Upvotes) that narrows results to the person's own favorites or upvoted activities. It combines with the name, genre and time filters and is cleared by "Clear filters".
 
+### Fixed (backend start-up)
+- **The backend now reads `backend/.env` itself.** Before, `npm start` failed with "Missing required environment variable DATABASE_URL" unless the variables were exported by hand (and the README's `export` command only worked on Mac and Linux). A small built-in reader (`src/env.js`) loads the file on any system; variables already set in the real environment win, so Docker and hosts keep working. `db:setup` reads the same file, and the missing-variable error now says where to put it.
+
 ### Changed (settings)
 - **Connection settings no longer live in `index.html`.** The backend serves `/config.js` built from its `.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, new `PUBLIC_API_BASE`), and the page reads `window.TC_CONFIG` from it; a static host can use a `config.js` copied from `config.example.js`. The page strips a trailing `/rest/v1` from the Supabase address, which fixes a log-in problem when the REST address is pasted in. With no settings the page stays in local mode. The committed `index.html` has empty settings again.
 

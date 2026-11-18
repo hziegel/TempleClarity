@@ -12,7 +12,7 @@ function temperature(v) {
 
 export function loadConfig(env = process.env) {
   const need = (name) => {
-    if (!env[name]) throw new Error(`Missing required environment variable ${name}`);
+    if (!env[name]) throw new Error(`Missing required environment variable ${name}. Add it to backend/.env (copy .env.example to .env), or set it in the environment.`);
     return env[name];
   };
   return {

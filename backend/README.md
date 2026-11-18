@@ -21,7 +21,6 @@ browser ──(Supabase JS: sign up / log in)──▶ Supabase Auth
    cd backend
    cp .env.example .env        # fill in the values
    npm install
-   export $(grep -v '^#' .env | xargs)
    npm run db:setup            # schema.sql, then schema_additions.sql, then seed.sql
    npm start
    ```
