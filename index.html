@@ -233,10 +233,10 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
 @keyframes breathe{0%,100%{opacity:.75}50%{opacity:1}}
 .welcome h1{animation:rise 2.4s ease-in-out .48s both}
 .welcome p{animation:rise 1.6s ease-in-out 2.56s both}
-.welcome .cards{animation:rise 1.39s ease-in-out 3.84s both}
-.welcome.skip h1,.welcome.skip p,.welcome.skip .cards{animation:none}
+.welcome .cards,.welcome .emotions{animation:rise 1.39s ease-in-out 3.84s both}
+.welcome.skip h1,.welcome.skip p,.welcome.skip .cards,.welcome.skip .emotions{animation:none}
 @keyframes rise{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.welcome h1,.welcome p,.welcome .cards,body::after{animation:none}textarea{transition:none}}
+@media (prefers-reduced-motion:reduce){.welcome h1,.welcome p,.welcome .cards,.welcome .emotions,body::after{animation:none}textarea{transition:none}}
 </style>
 </head>
 <body>
@@ -245,16 +245,7 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
 <noscript><div style="max-width:34em;margin:0 auto;padding:24px;text-align:center"><h1>Temple Clarity</h1><p>Temple Clarity is a calm, human-made space to relax, vent into a void that never saves your words, and find a gentle offline activity based on how you feel and how much time you have.</p><p>This site needs JavaScript to run. Please turn it on and reload.</p></div></noscript>
   <section class="module welcome" id="m-home" data-module="home">
     <h1>Welcome to Temple Clarity</h1>
-    <p>You don’t need to do anything here. You can sit as long as you like.</p>
-    <nav class="cards" aria-label="Rooms">
-      <a class="card" href="#emotion-cards" data-label="Emotion Cards" aria-label="Emotion Cards" style="text-decoration:none;color:inherit;"><svg width='54' height='54' viewBox='0 0 48 48' fill='none' stroke='#cefbf4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='24' cy='24' r='17'/><circle cx='18' cy='20' r='1.8' fill='#cefbf4' stroke='none'/><circle cx='30' cy='20' r='1.8' fill='#cefbf4' stroke='none'/><path d='M16 28.5Q24 36 32 28.5'/></svg></a>
-      <a class="card" href="#the-void" data-label="The Void" aria-label="The Void" style="text-decoration:none;color:inherit;"><svg width='54' height='54' viewBox='0 0 48 48' fill='none' stroke='#cefbf4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M10 9h28a4 4 0 0 1 4 4v17a4 4 0 0 1-4 4H23l-9 7v-7h-4a4 4 0 0 1-4-4V13a4 4 0 0 1 4-4z'/></svg></a>
-      <a class="card q" href="#about" style="text-decoration:none;color:inherit" data-label="What’s this?" aria-label="What’s this?"><svg width='54' height='54' viewBox='0 0 48 48' fill='none' stroke='#cefbf4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M17.5 18.5C17.5 14.5 20.5 12 24 12C27.5 12 30.5 14.5 30.5 18C30.5 21 28.5 22.5 26.5 24C25 25.2 24 26.2 24 29'/><circle cx='24' cy='36' r='1.8' fill='#cefbf4' stroke='none'/></svg></a>
-    </nav>
-  </section>
-
-  <section class="module" id="m-emotion-cards" data-module="emotion-cards" hidden>
-    <h1>How do you feel?</h1>
+    <p>A quiet place to find relaxing activities. Choose the card which best describes how you feel.</p>
     <div class="emotions" role="group" aria-label="Emotions">
       <button class="card emo" type="button" aria-pressed="false" title="Happy"><svg width='54' height='54' viewBox='0 0 48 48' fill='none' stroke='#cefbf4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='24' cy='24' r='17'/><circle cx='18' cy='20' r='1.8' fill='#cefbf4' stroke='none'/><circle cx='30' cy='20' r='1.8' fill='#cefbf4' stroke='none'/><path d='M15.5 27Q24 37.5 32.5 27'/></svg><span>Happy</span></button>
       <button class="card emo" type="button" aria-pressed="false" title="Sad"><svg width='54' height='54' viewBox='0 0 48 48' fill='none' stroke='#cefbf4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='24' cy='24' r='17'/><circle cx='18' cy='22' r='1.8' fill='#cefbf4' stroke='none'/><circle cx='30' cy='22' r='1.8' fill='#cefbf4' stroke='none'/><path d='M14 19l7-3M27 16l7 3'/><path d='M17 33Q24 27 31 33'/></svg><span>Sad</span></button>
@@ -506,7 +497,6 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
 
 <nav class="menu" id="menu" aria-label="Pages" hidden>
   <a href="#">Home</a>
-  <a href="#emotion-cards">Emotion Cards</a>
   <a href="#the-void">The Void</a>
   <a href="#search">Search Activities</a>
   <a href="#profile">My Profile</a>
@@ -599,18 +589,18 @@ addEventListener("unhandledrejection", e => logError("unhandledrejection", e.rea
 addEventListener("pagehide", flushErrorLog);
 
 // Each room is a module: add an entry here and a matching <section data-module="...">.
-const MODULES = ["home","emotion-cards","the-void","time","idea","search","login","profile","terms","about"];
+const MODULES = ["home","the-void","time","idea","search","login","profile","terms","about"];
 let chosenEmotion = null, chosenTime = null, chosenTimeLabel = "";
 function show(){
   const h = location.hash.slice(1);
   const am = /^activity-(\d+)$/.exec(h);
-  const name = am ? "idea" : (MODULES.includes(h) ? h : "home");
+  const name = am ? "idea" : (MODULES.includes(h) ? h : "home"); // "#emotion-cards" (old links) falls through to home
   document.querySelectorAll(".module").forEach(m => m.hidden = m.dataset.module !== name);
   document.getElementById("back").hidden = name === "home";
   if (am) {
-    if (!showActivityById(Number(am[1]))) { location.hash = "#emotion-cards"; return; }
+    if (!showActivityById(Number(am[1]))) { location.hash = "#"; return; }
   } else if (name === "idea") {
-    if (!chosenEmotion || !chosenTime) { location.hash = "#emotion-cards"; return; }
+    if (!chosenEmotion || !chosenTime) { location.hash = "#"; return; }
     renderIdea(true);
   } else if (name === "search") {
     renderSearch();

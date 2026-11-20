@@ -1,6 +1,6 @@
 # Temple Clarity
 
-A quiet, human-made web space to relax, vent and find offline activities. Click through the Emotion Cards to get an activity suggestion based on how you feel and how much time you have, or type into the Void, a chat window that goes nowhere and never saves your text.
+A quiet, human-made web space to relax, vent and find offline activities. Pick an Emotion Card on the home page to get an activity suggestion based on how you feel and how much time you have, or type into the Void, a chat window that goes nowhere and never saves your text.
 
 By Heron of [Simply Joyful Designs](mailto:mail@simplyjoyfuldesigns.com).
 
