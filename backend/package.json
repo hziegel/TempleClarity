@@ -4,7 +4,9 @@
   "private": true,
   "description": "Small API for Temple Clarity: Postgres for data, Supabase for authentication.",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node src/index.js",
     "db:setup": "sh scripts/db-setup.sh",
@@ -12,6 +14,9 @@
     "test:sql": "sh test/sql.sh"
   },
   "dependencies": {
+    "@supabase/server": "^1.9.2",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.1",
     "pg": "^8.13.0"
   }
 }
