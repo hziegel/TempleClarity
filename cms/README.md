@@ -44,7 +44,7 @@ Open <http://127.0.0.1:8000/> and log in. Stop it with `Ctrl+C`.
 - **Shortest / longest time** are in minutes (`0.5` = 30 seconds). The site's choices match any activity whose range overlaps them: short = 0–15, medium = 15–45, long = 45 and up. The card shows the longest time.
 - **Needs**: group only, requires supplies.
 - **Genres**: tick any that apply.
-- **Emotions and weights**: pick an emotion and a number. Higher = suggested sooner for that feeling; `0` = never. Leave an emotion out if the activity doesn't fit it. Use **Save and continue editing** to add more rows.
+- **Emotions and weights**: pick an emotion and a number. Higher = suggested sooner for that feeling; `0` = never. Leave an emotion out if the activity doesn't fit it. A new activity opens with eight blank rows, one per emotion; an existing one shows only as many blank rows as it needs to reach eight. Blank rows are ignored.
 
 Emotion names are saved in lowercase, to match the rest of your data. The site only has the eight emotion cards (happy, sad, mad, scared, bored, tired, nervous, calm), so a new emotion won't appear until the front end has a card for it.
 

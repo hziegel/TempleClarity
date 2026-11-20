@@ -66,8 +66,14 @@ class ActivityForm(forms.ModelForm):
 
 class ActivityEmotionInline(admin.TabularInline):
     model = ActivityEmotion
-    extra = 2
     fields = ("emotion", "relevance_score")
+    max_emotions = 8  # one line per emotion card
+
+    def get_extra(self, request, obj=None, **kwargs):
+        # New activity: eight blank lines. Existing one: only enough blank lines to reach eight in total.
+        if obj is None:
+            return self.max_emotions
+        return max(self.max_emotions - obj.activity_emotions.count(), 0)
     verbose_name = "emotion weight"
     verbose_name_plural = "Emotions and weights (higher = suggested sooner; 0 = never; leave an emotion out if it doesn't fit)"
 
