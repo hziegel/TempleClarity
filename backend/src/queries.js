@@ -7,7 +7,7 @@ const ACTIVITY_COLUMNS = `
   a.id, a.title, a.description,
   (EXTRACT(EPOCH FROM a.min_time) / 60)::float8 AS min_minutes,
   (EXTRACT(EPOCH FROM a.max_time) / 60)::float8 AS max_minutes,
-  a.screen_only, a.group_only, a.requires_supplies,
+  a.group_only, a.requires_supplies,
   COALESCE((SELECT array_agg(g.title ORDER BY g.title)
             FROM activity_genres ag JOIN genres g ON g.id = ag.genre_id
             WHERE ag.activity_id = a.id), '{}') AS genres,

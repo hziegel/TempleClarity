@@ -67,7 +67,6 @@ CREATE TABLE "activities" (
   "description" text,
   "min_time" interval,
   "max_time" interval,
-  "screen_only" bool,
   "group_only" bool,
   "requires_supplies" bool,
   "published" bool DEFAULT false,

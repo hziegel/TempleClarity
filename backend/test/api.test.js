@@ -13,7 +13,7 @@ const ACTS = [
 ];
 function makeDb() {
   const st = { links: new Map(), users: new Map(), profiles: new Map(), mail: new Map(), subs: new Map(), favs: [], ups: [], downs: [], logs: [], nextId: 100 };
-  const act = (a, emotion) => ({ ...a, screen_only: false, group_only: false, requires_supplies: false, relevance: emotion ? a.scores[emotion] ?? null : null });
+  const act = (a, emotion) => ({ ...a, group_only: false, requires_supplies: false, relevance: emotion ? a.scores[emotion] ?? null : null });
   const mine = (arr, uid, aid) => arr.some((r) => r.user_id === uid && r.activity_id === aid);
   const drop = (name, uid, aid) => { st[name] = st[name].filter((r) => !(r.user_id === uid && (aid == null || r.activity_id === aid))); };
   const run = async (sql, p = []) => {
@@ -116,7 +116,7 @@ test("activities: time windows overlap, emotions sort by relevance, unknown emot
   assert.deepEqual(ids(await call("GET", "/api/activities?bucket=short&emotion=Nervous")), [1, 2, 4]); // none tagged: whole pool
   assert.equal((await call("GET", "/api/activities?bucket=huge")).status, 400);
   const a = (await call("GET", "/api/activities/4")).json.activity;
-  assert.deepEqual([a.minMinutes, a.maxMinutes, a.minutes, a.screenOnly], [10, 30, 30, false]);
+  assert.deepEqual([a.minMinutes, a.maxMinutes, a.minutes], [10, 30, 30]);
   assert.equal("scores" in a || "relevance" in a, false);
   assert.equal((await call("GET", "/api/activities/99")).status, 404);
   assert.equal((await call("GET", "/api/activities/0")).status, 400);

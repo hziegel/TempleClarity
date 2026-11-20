@@ -54,7 +54,6 @@ const toActivity = (r) => ({
   minMinutes: r.min_minutes,
   maxMinutes: r.max_minutes,
   minutes: r.max_minutes ?? r.min_minutes,   // the single number the cards show
-  screenOnly: !!r.screen_only,
   groupOnly: !!r.group_only,
   requiresSupplies: !!r.requires_supplies,
   genres: r.genres,

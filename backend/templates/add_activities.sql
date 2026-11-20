@@ -14,7 +14,6 @@
 --   min / max minutes  How long it takes. The site's time choices match activities whose range
 --                      overlaps them: short = 0-15, medium = 15-45, long = 45 and up.
 --                      The card shows the max. Use the same number twice for a fixed time.
---   screen_only        true if it needs a phone, tablet or computer.
 --   group_only         true if it needs other people.
 --   requires_supplies  true if it needs anything beyond what is usually at hand.
 --   published          Only true activities are returned by the API. false = hidden draft.
@@ -32,13 +31,12 @@ SELECT setval(pg_get_serial_sequence('activities', 'id'), GREATEST((SELECT max(i
 
 -- ============================== ACTIVITY (TEMPLATE: copy it, remove the "-- " at the start of each line, and fill it in) ==============================
 -- WITH act AS (
---   INSERT INTO activities (title, description, min_time, max_time, screen_only, group_only, requires_supplies, published, created_at)
+--   INSERT INTO activities (title, description, min_time, max_time, group_only, requires_supplies, published, created_at)
 --   VALUES (
 --     'YOUR TITLE HERE',
 --     'Your description here.',
 --     make_interval(mins => 5),      -- min minutes
 --     make_interval(mins => 10),     -- max minutes
---     false,                         -- screen_only
 --     false,                         -- group_only
 --     false,                         -- requires_supplies
 --     true,                          -- published
@@ -46,7 +44,7 @@ SELECT setval(pg_get_serial_sequence('activities', 'id'), GREATEST((SELECT max(i
 --   )
 --   ON CONFLICT (title) DO UPDATE SET
 --     description = EXCLUDED.description, min_time = EXCLUDED.min_time, max_time = EXCLUDED.max_time,
---     screen_only = EXCLUDED.screen_only, group_only = EXCLUDED.group_only,
+--     group_only = EXCLUDED.group_only = EXCLUDED.group_only,
 --     requires_supplies = EXCLUDED.requires_supplies, published = EXCLUDED.published
 --   RETURNING id
 -- ),
@@ -69,12 +67,12 @@ SELECT setval(pg_get_serial_sequence('activities', 'id'), GREATEST((SELECT max(i
 
 -- Test: Hum a long note
 WITH act AS (
-  INSERT INTO activities (title, description, min_time, max_time, screen_only, group_only, requires_supplies, published, created_at)
+  INSERT INTO activities (title, description, min_time, max_time, group_only, requires_supplies, published, created_at)
   VALUES ('Test: Hum a long note', 'Take a slow breath in, then hum one steady note as long as is comfortable. Feel the buzz in your chest. Repeat three times.',
-          make_interval(mins => 3), make_interval(mins => 5), false, false, false, true, now())
+          make_interval(mins => 3), make_interval(mins => 5), false, false, true, now())
   ON CONFLICT (title) DO UPDATE SET
     description = EXCLUDED.description, min_time = EXCLUDED.min_time, max_time = EXCLUDED.max_time,
-    screen_only = EXCLUDED.screen_only, group_only = EXCLUDED.group_only,
+    group_only = EXCLUDED.group_only = EXCLUDED.group_only,
     requires_supplies = EXCLUDED.requires_supplies, published = EXCLUDED.published
   RETURNING id
 ),
@@ -92,12 +90,12 @@ JOIN emotions e ON e.title = v.emotion;
 
 -- Test: Write a kind note
 WITH act AS (
-  INSERT INTO activities (title, description, min_time, max_time, screen_only, group_only, requires_supplies, published, created_at)
+  INSERT INTO activities (title, description, min_time, max_time, group_only, requires_supplies, published, created_at)
   VALUES ('Test: Write a kind note', 'Write two or three kind sentences to someone you care about. You can send it or keep it.',
-          make_interval(mins => 10), make_interval(mins => 20), false, false, true, true, now())
+          make_interval(mins => 10), make_interval(mins => 20), false, true, true, now())
   ON CONFLICT (title) DO UPDATE SET
     description = EXCLUDED.description, min_time = EXCLUDED.min_time, max_time = EXCLUDED.max_time,
-    screen_only = EXCLUDED.screen_only, group_only = EXCLUDED.group_only,
+    group_only = EXCLUDED.group_only = EXCLUDED.group_only,
     requires_supplies = EXCLUDED.requires_supplies, published = EXCLUDED.published
   RETURNING id
 ),
@@ -115,12 +113,12 @@ JOIN emotions e ON e.title = v.emotion;
 
 -- Test: Walk and count blue things
 WITH act AS (
-  INSERT INTO activities (title, description, min_time, max_time, screen_only, group_only, requires_supplies, published, created_at)
+  INSERT INTO activities (title, description, min_time, max_time, group_only, requires_supplies, published, created_at)
   VALUES ('Test: Walk and count blue things', 'Take a slow walk, inside or out, and count everything blue you notice. See if you can reach ten.',
-          make_interval(mins => 15), make_interval(mins => 60), false, false, false, true, now())
+          make_interval(mins => 15), make_interval(mins => 60), false, false, true, now())
   ON CONFLICT (title) DO UPDATE SET
     description = EXCLUDED.description, min_time = EXCLUDED.min_time, max_time = EXCLUDED.max_time,
-    screen_only = EXCLUDED.screen_only, group_only = EXCLUDED.group_only,
+    group_only = EXCLUDED.group_only = EXCLUDED.group_only,
     requires_supplies = EXCLUDED.requires_supplies, published = EXCLUDED.published
   RETURNING id
 ),

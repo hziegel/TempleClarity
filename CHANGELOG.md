@@ -7,6 +7,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 ### Added (CMS)
 - **Private Django admin (`cms/`)** for adding and editing activities from your own computer. It reads and writes the same Supabase database as the site and never creates or changes your tables (the models are `managed = False`). Add an activity with its description, time range in minutes, needs (group only, requires supplies), genre checkboxes and per-emotion weights; publish or unpublish one or many at once. Emotion names are saved in lowercase. Django's own login and session tables live in a local SQLite file, not in your Supabase `public` schema. Includes `fix_sequences` for the starter data's id counters and tests that check every model column against `backend/schema.sql`. Not part of the Docker image. Not yet run against a real Django install; see `cms/README.md`.
 
+### Removed (screen-only)
+- **The `screen_only` activity field is gone everywhere.** The column was dropped from the database, so the API no longer selects it and no longer returns `screenOnly`. It's also removed from `schema.sql`, the seed data, the add-activities template, the tests and the CMS model.
+
 ### Changed (landing page)
 - **Time cards and the "Try this" result match the emotion cards.** The three "How much time do you have?" cards and the suggested-activity box are now solid `#cefbf4` rounded squares with `#0e1610` text. The time buttons also have a slight top-to-bottom gradient, a teal border and a soft shadow so they read as buttons. On hover they brighten instead of turning dark. Search results and profile lists are unchanged.
 - **New flame logo.** The logo at the top of the page is now an SVG flame (a gradient from `#0e1610` at the center through `#9ecbcb` to `#cefbf4` at the edges, with a star cut out), replacing the PNG. The browser-tab icon and link-preview image are unchanged.

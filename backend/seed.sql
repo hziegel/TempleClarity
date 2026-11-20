@@ -33,24 +33,24 @@ ON CONFLICT (title) DO NOTHING;
   ('Calm')
 ON CONFLICT (title) DO NOTHING; */
 
-INSERT INTO activities (id, title, description, min_time, max_time, screen_only, group_only, requires_supplies, published, created_at)
+INSERT INTO activities (id, title, description, min_time, max_time, group_only, requires_supplies, published, created_at)
 OVERRIDING SYSTEM VALUE VALUES
-  (1, 'Focus on small object', 'Find a small object which fits easily in your hand such as a tiny rock, paper clip, seashell or bracelet. Close your eyes and feel the weight and texture in your hand. Open your eyes and admire the shapes and colors from all angles. Let the small object fascinate you as everything else melts away.', make_interval(secs => 30), make_interval(mins => 10), false, false, false, true, now()),
-  (2, 'Count something in the room', 'Find something which there are many of such as leaves on a branch or books on a shelf and count how many you see.', make_interval(mins => 1), make_interval(mins => 10), false, false, false, true, now()),
-  (3, 'Breathing exercise', 'Concentrate on breathing slowly in and out', make_interval(mins => 1), make_interval(mins => 30), false, false, false, true, now()),
-  (4, 'ASMR', 'Listen to some relaxing sounds', make_interval(mins => 5), make_interval(hours => 1), false, false, false, true, now()),
-  (5, 'Count backwards from 100', 'As you count backward, feel your body start to relax and slow down', make_interval(secs => 30), make_interval(mins => 1), false, false, false, true, now()),
-  (6, 'Scream into a pillow', 'The pillow will understand', make_interval(secs => 30), make_interval(mins => 5), false, false, false, true, now()),
-  (7, 'Say a tongue twister', 'Can you say Peter Piper picked a peck of pickled peppers?', make_interval(secs => 30), make_interval(mins => 5), false, false, false, true, now()),
-  (8, 'Name the problem', 'Sometimes when you''re stressed, it''s hard to even figure out why. Take a few minutes to put a name to the problem before trying to resolve the feeling.', make_interval(secs => 30), make_interval(mins => 10), false, false, false, true, now()),
-  (9, 'Splash cold water on face', 'Let yourself feel the sensation of the cool water before drying your face.', make_interval(secs => 30), make_interval(mins => 1), false, false, false, true, now()),
-  (10, 'High intensity exercise', 'Sometimes working out can be the perfect distraction', make_interval(mins => 10), make_interval(hours => 1), false, false, false, true, now()),
-  (11, 'Tense and relax muscles', 'Tense your muscles and then slowly release. Feel all that tension go away. Repeat as many times as you like.', make_interval(secs => 30), make_interval(mins => 5), false, false, false, true, now()),
-  (12, 'Radical acceptance', 'Accept the reality of the situation, even if you don''t like it', make_interval(secs => 30), make_interval(mins => 10), false, false, false, true, now()),
-  (13, 'Stamp art', 'Use a stamp with paint on paper or make a stamp from household items', make_interval(mins => 5), make_interval(hours => 1), false, false, false, true, now()),
-  (14, 'Draw something step by step', 'Learn how to draw something with a simple tutorial', make_interval(mins => 1), make_interval(mins => 30), false, false, false, true, now()),
-  (15, 'Draw something from reference', 'Look up reference and practice drawing objects, animals or landscapes', make_interval(mins => 15), make_interval(hours => 12), false, false, false, true, now()),
-  (16, 'Origami', 'Practice the relaxing art of folding paper', make_interval(mins => 5), make_interval(hours => 1), false, false, false, true, now())
+  (1, 'Focus on small object', 'Find a small object which fits easily in your hand such as a tiny rock, paper clip, seashell or bracelet. Close your eyes and feel the weight and texture in your hand. Open your eyes and admire the shapes and colors from all angles. Let the small object fascinate you as everything else melts away.', make_interval(secs => 30), make_interval(mins => 10), false, false, true, now()),
+  (2, 'Count something in the room', 'Find something which there are many of such as leaves on a branch or books on a shelf and count how many you see.', make_interval(mins => 1), make_interval(mins => 10), false, false, true, now()),
+  (3, 'Breathing exercise', 'Concentrate on breathing slowly in and out', make_interval(mins => 1), make_interval(mins => 30), false, false, true, now()),
+  (4, 'ASMR', 'Listen to some relaxing sounds', make_interval(mins => 5), make_interval(hours => 1), false, false, true, now()),
+  (5, 'Count backwards from 100', 'As you count backward, feel your body start to relax and slow down', make_interval(secs => 30), make_interval(mins => 1), false, false, true, now()),
+  (6, 'Scream into a pillow', 'The pillow will understand', make_interval(secs => 30), make_interval(mins => 5), false, false, true, now()),
+  (7, 'Say a tongue twister', 'Can you say Peter Piper picked a peck of pickled peppers?', make_interval(secs => 30), make_interval(mins => 5), false, false, true, now()),
+  (8, 'Name the problem', 'Sometimes when you''re stressed, it''s hard to even figure out why. Take a few minutes to put a name to the problem before trying to resolve the feeling.', make_interval(secs => 30), make_interval(mins => 10), false, false, true, now()),
+  (9, 'Splash cold water on face', 'Let yourself feel the sensation of the cool water before drying your face.', make_interval(secs => 30), make_interval(mins => 1), false, false, true, now()),
+  (10, 'High intensity exercise', 'Sometimes working out can be the perfect distraction', make_interval(mins => 10), make_interval(hours => 1), false, false, true, now()),
+  (11, 'Tense and relax muscles', 'Tense your muscles and then slowly release. Feel all that tension go away. Repeat as many times as you like.', make_interval(secs => 30), make_interval(mins => 5), false, false, true, now()),
+  (12, 'Radical acceptance', 'Accept the reality of the situation, even if you don''t like it', make_interval(secs => 30), make_interval(mins => 10), false, false, true, now()),
+  (13, 'Stamp art', 'Use a stamp with paint on paper or make a stamp from household items', make_interval(mins => 5), make_interval(hours => 1), false, false, true, now()),
+  (14, 'Draw something step by step', 'Learn how to draw something with a simple tutorial', make_interval(mins => 1), make_interval(mins => 30), false, false, true, now()),
+  (15, 'Draw something from reference', 'Look up reference and practice drawing objects, animals or landscapes', make_interval(mins => 15), make_interval(hours => 12), false, false, true, now()),
+  (16, 'Origami', 'Practice the relaxing art of folding paper', make_interval(mins => 5), make_interval(hours => 1), false, false, true, now())
 ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description,
   min_time = EXCLUDED.min_time, max_time = EXCLUDED.max_time;
 
