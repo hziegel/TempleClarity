@@ -5,7 +5,7 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 ## [Unreleased]
 
 ### Changed (landing page)
-- **The emotion cards are now the home page.** The separate welcome page with its three cards is gone. The home page opens with "Welcome to Temple Clarity" and "A quiet place to find relaxing activities. Choose the card which best describes how you feel." above the eight emotion cards, with the same slow fade-in. The Void and What's this? are reached from the menu. Old `#emotion-cards` links still work and open the home page, and the "Emotion Cards" menu entry was removed since Home is the same page.
+- **The emotion cards are now the home page.** The separate welcome page with its three cards is gone. The home page opens with "Welcome to Temple Clarity" and, on separate lines, "A quiet place to find relaxing activities." (in smaller type) and "Choose the card which best describes how you feel." above the eight emotion cards, with the same slow fade-in. The Void and What's this? are reached from the menu. Old `#emotion-cards` links still work and open the home page, and the "Emotion Cards" menu entry was removed since Home is the same page.
 
 ### Added
 - **Backend (`backend/`):** a small Node.js API using Postgres for data and Supabase for sign-in. Uses your `schema.sql` as-is, plus `schema_additions.sql` (Supabase link and error log tables), seed data for the 16 starting activities, endpoints for activities, session, profile, favorites/votes, terms acceptance, account deletion and the error log, and tests. See `backend/README.md`.
