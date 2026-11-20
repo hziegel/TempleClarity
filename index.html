@@ -52,8 +52,9 @@ p{margin:0 0 14px;color:var(--soft)}
 .emo svg{width:64px;height:64px}
 .emo[aria-pressed="true"]{border-color:var(--glow);background:rgba(24,36,26,.7)}
 .picks{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:32px}
-.card.pick{width:144px;height:88px;font-size:1.2rem}
-.pick[aria-pressed="true"]{border-color:var(--glow);background:rgba(24,36,26,.7)}
+.card.pick{width:144px;height:88px;font-size:1.2rem;background:#cefbf4;color:#0e1610;border:0;backdrop-filter:none;transition:box-shadow .4s,filter .4s}
+.card.pick:hover,.card.pick:focus-visible{background:#cefbf4;box-shadow:0 0 14px var(--glow)}
+.pick[aria-pressed="true"]{background:#cefbf4;box-shadow:0 0 0 3px #0e1610,0 0 0 5px #cefbf4,0 0 16px var(--glow)}
 #void{display:block;background:#000;min-height:200px;margin-top:20px;padding-bottom:56px;transition:none}
 #void.hide{color:transparent;caret-color:transparent}
 .ghost{position:absolute;box-sizing:border-box;overflow:hidden;pointer-events:none;border:1px solid transparent;padding:16px 16px 56px;white-space:pre-wrap;overflow-wrap:break-word;color:var(--ink)}
@@ -91,10 +92,10 @@ p{margin:0 0 14px;color:var(--soft)}
 .about-join label{display:block;margin:0 0 6px;font-size:1.05rem;color:var(--ink)}
 .about-join .btn{margin-top:14px}
 .about-join .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-.idea{max-width:440px;margin:24px auto 28px;padding:28px 24px;background:rgba(8,14,10,.82);border:3px solid rgba(206,251,244,.45);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.5);backdrop-filter:blur(3px)}
-.idea h2{font-weight:400;font-size:1.8rem;line-height:1.2;margin:0 0 14px;color:#f2fffd}
-.idea p{font-size:1.3rem;line-height:1.6;margin:0 0 14px;color:#e6fffb}
-.idea .idea-time{font-style:italic;font-size:1.15rem;margin:0;color:#c4f1ec}
+.idea{max-width:440px;margin:24px auto 28px;padding:28px 24px;background:#cefbf4;border:0;border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.idea h2{font-weight:400;font-size:1.8rem;line-height:1.2;margin:0 0 14px;color:#0e1610}
+.idea p{font-size:1.3rem;line-height:1.6;margin:0 0 14px;color:#0e1610}
+.idea .idea-time{font-style:italic;font-size:1.15rem;margin:0;color:#0e1610}
 #another,#copy{display:inline-flex;align-items:center;gap:10px}
 .reactions{display:flex;justify-content:center;gap:14px;margin-top:18px}
 .react{all:unset;box-sizing:border-box;cursor:pointer;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:50%;opacity:.75;transition:opacity .3s,background .3s}
