@@ -211,6 +211,7 @@ a,button,summary,select,.card{touch-action:manipulation}
 [hidden]{display:none !important}
 .welcome h1{color:#cefbf4}
 .welcome p{font-size:1.3rem;max-width:30ch;margin-inline:auto;color:var(--ink)}
+.welcome p.tagline{font-size:1.05rem;max-width:none;margin-bottom:6px}
 .cards{display:flex;gap:16px 10px;justify-content:center;flex-wrap:wrap;margin-top:44px}
 .cards .card{flex-direction:column;gap:8px;width:92px;height:116px;padding:10px 2px}
 .cards .card{padding:14px 6px;height:auto;min-height:124px}
@@ -245,7 +246,8 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
 <noscript><div style="max-width:34em;margin:0 auto;padding:24px;text-align:center"><h1>Temple Clarity</h1><p>Temple Clarity is a calm, human-made space to relax, vent into a void that never saves your words, and find a gentle offline activity based on how you feel and how much time you have.</p><p>This site needs JavaScript to run. Please turn it on and reload.</p></div></noscript>
   <section class="module welcome" id="m-home" data-module="home">
     <h1>Welcome to Temple Clarity</h1>
-    <p>A quiet place to find relaxing activities. Choose the card which best describes how you feel.</p>
+    <p class="tagline">A quiet place to find relaxing activities.</p>
+    <p>Choose the card which best describes how you feel.</p>
     <div class="emotions" role="group" aria-label="Emotions">
       <button class="card emo" type="button" aria-pressed="false" title="Happy"><svg width='54' height='54' viewBox='0 0 48 48' fill='none' stroke='#cefbf4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='24' cy='24' r='17'/><circle cx='18' cy='20' r='1.8' fill='#cefbf4' stroke='none'/><circle cx='30' cy='20' r='1.8' fill='#cefbf4' stroke='none'/><path d='M15.5 27Q24 37.5 32.5 27'/></svg><span>Happy</span></button>
       <button class="card emo" type="button" aria-pressed="false" title="Sad"><svg width='54' height='54' viewBox='0 0 48 48' fill='none' stroke='#cefbf4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='24' cy='24' r='17'/><circle cx='18' cy='22' r='1.8' fill='#cefbf4' stroke='none'/><circle cx='30' cy='22' r='1.8' fill='#cefbf4' stroke='none'/><path d='M14 19l7-3M27 16l7 3'/><path d='M17 33Q24 27 31 33'/></svg><span>Sad</span></button>
