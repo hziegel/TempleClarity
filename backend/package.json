@@ -14,9 +14,6 @@
     "test:sql": "sh test/sql.sh"
   },
   "dependencies": {
-    "@supabase/server": "^1.9.2",
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.119.1",
     "pg": "^8.13.0"
   }
 }
