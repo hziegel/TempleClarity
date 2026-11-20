@@ -1,2 +1,10 @@
 # Real settings for a static host; copy config.example.js to config.js
 config.js
+
+# Django CMS (local only)
+cms/.env
+cms/cms.sqlite3
+cms/.secret_key
+cms/.venv/
+__pycache__/
+*.pyc

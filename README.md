@@ -18,3 +18,7 @@ The front end is complete. These parts are placeholders waiting for a backend:
 - `getRecommendation()` is the swap point for the real recommender and activity database.
 - `authRequest()`, `sessionRequest()` and `logoutRequest()` are the sign-up, login and session calls. Sign-up sends `termsAccepted` and `termsVersion`.
 - Favorites and votes are stored in the browser (`localStorage`) for now.
+
+## Adding activities (CMS)
+
+`cms/` is a private Django admin for adding and editing activities from your own computer. It uses the same database as the site. See [cms/README.md](cms/README.md).
