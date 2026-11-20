@@ -48,7 +48,6 @@ class Activity(models.Model):
     description = models.TextField(blank=True, null=True)
     min_time = models.DurationField(blank=True, null=True)
     max_time = models.DurationField(blank=True, null=True)
-    screen_only = models.BooleanField(default=False)
     group_only = models.BooleanField(default=False)
     requires_supplies = models.BooleanField(default=False)
     published = models.BooleanField(default=False)
