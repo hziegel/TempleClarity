@@ -32,7 +32,7 @@ class ActivityForm(forms.ModelForm):
 
     class Meta:
         model = Activity
-        fields = ["title", "description", "published", "screen_only", "group_only", "requires_supplies"]
+        fields = ["title", "description", "published", "group_only", "requires_supplies"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,12 +79,12 @@ class ActivityAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {"fields": ("title", "description", "published")}),
         ("How long it takes", {"fields": ("min_minutes", "max_minutes")}),
-        ("Needs", {"fields": ("screen_only", "group_only", "requires_supplies")}),
+        ("Needs", {"fields": ("group_only", "requires_supplies")}),
         ("Genres", {"fields": ("genres",)}),
     )
     list_display = ("title", "published", "time_range", "emotion_weights", "genre_names")
     list_editable = ("published",)
-    list_filter = ("published", "screen_only", "group_only", "requires_supplies")
+    list_filter = ("published", "group_only", "requires_supplies")
     search_fields = ("title", "description")
     ordering = ("title",)
     list_per_page = 50

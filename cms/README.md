@@ -42,7 +42,7 @@ Open <http://127.0.0.1:8000/> and log in. Stop it with `Ctrl+C`.
 - **Title** must be unique. **Description** is the text on the card.
 - **Published** is off by default: a draft isn't shown on the site until you tick it. On the activity list you can tick **Published** for several rows and press **Save**, or use the actions menu to publish or unpublish a selection.
 - **Shortest / longest time** are in minutes (`0.5` = 30 seconds). The site's choices match any activity whose range overlaps them: short = 0–15, medium = 15–45, long = 45 and up. The card shows the longest time.
-- **Needs**: screen only, group only, requires supplies.
+- **Needs**: group only, requires supplies. (The database's `screen_only` column isn't shown. New activities get `false`, and existing values are left as they are.)
 - **Genres**: tick any that apply.
 - **Emotions and weights**: pick an emotion and a number. Higher = suggested sooner for that feeling; `0` = never. Leave an emotion out if the activity doesn't fit it. Use **Save and continue editing** to add more rows.
 
