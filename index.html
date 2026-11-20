@@ -52,9 +52,9 @@ p{margin:0 0 14px;color:var(--soft)}
 .emo svg{width:64px;height:64px}
 .emo[aria-pressed="true"]{border-color:var(--glow);background:rgba(24,36,26,.7)}
 .picks{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:32px}
-.card.pick{width:144px;height:88px;font-size:1.2rem;background:#cefbf4;color:#0e1610;border:0;backdrop-filter:none;transition:box-shadow .4s,filter .4s}
-.card.pick:hover,.card.pick:focus-visible{background:#cefbf4;box-shadow:0 0 14px var(--glow)}
-.pick[aria-pressed="true"]{background:#cefbf4;box-shadow:0 0 0 3px #0e1610,0 0 0 5px #cefbf4,0 0 16px var(--glow)}
+.card.pick{width:144px;height:88px;font-size:1.2rem;background:linear-gradient(180deg,#e9fffb 0%,#cefbf4 55%,#a9dcd4 100%);color:#0e1610;border:2px solid #7fb5b0;backdrop-filter:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 4px 10px rgba(0,0,0,.45);transition:box-shadow .4s,filter .4s}
+.card.pick:hover,.card.pick:focus-visible{box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 0 14px var(--glow)}
+.pick[aria-pressed="true"]{box-shadow:0 0 0 3px #0e1610,0 0 0 5px #cefbf4,0 0 16px var(--glow)}
 #void{display:block;background:#000;min-height:200px;margin-top:20px;padding-bottom:56px;transition:none}
 #void.hide{color:transparent;caret-color:transparent}
 .ghost{position:absolute;box-sizing:border-box;overflow:hidden;pointer-events:none;border:1px solid transparent;padding:16px 16px 56px;white-space:pre-wrap;overflow-wrap:break-word;color:var(--ink)}
