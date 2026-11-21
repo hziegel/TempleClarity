@@ -96,6 +96,12 @@ p{margin:0 0 14px;color:var(--soft)}
 .idea h2{font-weight:400;font-size:1.8rem;line-height:1.2;margin:0 0 14px;color:#0e1610}
 .idea p{font-size:1.3rem;line-height:1.6;margin:0 0 14px;color:#0e1610}
 .idea p:last-child{margin-bottom:0}
+.contemplating{max-width:440px;margin:56px auto 64px;text-align:center;font-family:Impact,Haettenschweiler,"Arial Narrow Bold","Arial Black",sans-serif;font-weight:400;font-size:clamp(1.5rem,6.4vw,2.1rem);letter-spacing:.05em;color:#cefbf4;text-shadow:0 0 14px rgba(206,251,244,.55),3px 3px 0 #0e1610;white-space:nowrap}
+.contemplating .dots i{font-style:normal;display:inline-block;margin-left:.28em;animation:dotspin 1.2s ease-in-out infinite}
+.contemplating .dots i:nth-child(2){animation-delay:.2s}
+.contemplating .dots i:nth-child(3){animation-delay:.4s}
+@keyframes dotspin{0%,60%,100%{opacity:.2;transform:translateY(0)}20%{opacity:1;transform:translateY(-.18em)}}
+.thinking h1,.thinking #idea-context,.thinking #idea,.thinking #another,.thinking #copy,.thinking .reactions{display:none}
 #another,#copy{display:inline-flex;align-items:center;gap:10px}
 .reactions{display:flex;justify-content:center;gap:14px;margin-top:18px}
 .react{all:unset;box-sizing:border-box;cursor:pointer;width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:50%;opacity:.75;transition:opacity .3s,background .3s}
@@ -299,6 +305,7 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
       <h2 id="idea-title"></h2>
       <p id="idea-desc"></p>
     </div>
+    <div class="contemplating" id="contemplating" role="status" hidden>contemplating<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></div>
     <button class="btn" id="another" type="button"><svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='#cefbf4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><rect x='3' y='3' width='18' height='18' rx='4.5'/><circle cx='8.2' cy='8.2' r='1.3' fill='#cefbf4' stroke='none'/><circle cx='15.8' cy='8.2' r='1.3' fill='#cefbf4' stroke='none'/><circle cx='12' cy='12' r='1.3' fill='#cefbf4' stroke='none'/><circle cx='8.2' cy='15.8' r='1.3' fill='#cefbf4' stroke='none'/><circle cx='15.8' cy='15.8' r='1.3' fill='#cefbf4' stroke='none'/></svg><span>Try another</span></button>
     <button class="btn" id="copy" type="button"><svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='#cefbf4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg><span id="copy-label" aria-live="polite">Copy link</span></button>
     <div class="reactions" role="group" aria-label="React to this activity">
@@ -750,8 +757,10 @@ async function getRankedActivities(emotion, bucket) {
   return tagged.length ? tagged : pool;
 }
 async function nextFromQueue(emotion, bucket) {
+  const run = ideaRun;
   if (!ideaQueue.length) {
     const q = (await getRankedActivities(emotion, bucket)).slice();
+    if (run !== ideaRun) return null;                  // a newer choice has started since; drop this answer
     // The server may reorder the list a little each time, so a new cycle can start with the
     // activity just shown. Move that one to the end so it isn't repeated straight away.
     const k = q.findIndex(a => a.id === ideaLast);
@@ -794,20 +803,32 @@ function showActivityById(id) {
   fillActivity(a);
   return true;
 }
-let ideaBusy = false;
+let ideaBusy = false, ideaRun = 0;
+function setThinking(on) {
+  document.getElementById("m-idea").classList.toggle("thinking", on);
+  document.getElementById("contemplating").hidden = !on;
+}
+// Every suggestion appears after a "contemplating . . ." pause of 2 to 5 seconds. The answer is fetched
+// while the pause runs, so it is ready when the pause ends.
 async function renderIdea(reset) {
-  if (reset) { seenIdeas = []; ideaQueue = []; ideaLast = null; }
-  if (ideaBusy) return;
+  if (reset) { seenIdeas = []; ideaQueue = []; ideaLast = null; ideaRun++; }
+  else if (ideaBusy) return;
+  const run = ideaRun, startHash = location.hash;
   ideaBusy = true;
   try {
     const flow = !!(chosenEmotion && chosenTime);
     setContext(flow ? "Feeling " + chosenEmotion.toLowerCase() + ", with " + chosenTimeLabel + "." : "");
+    setThinking(true);
+    const began = Date.now(), wait = 2000 + Math.random() * 3000;
     const a = await nextFromQueue(flow ? chosenEmotion : null, flow ? chosenTime : null);
+    const rest = wait - (Date.now() - began);
+    if (rest > 0) await new Promise(r => setTimeout(r, rest));
+    if (run !== ideaRun || location.hash !== startHash) return;   // the person chose again or left the page
     if (!a) return;
     seenIdeas.push(a.id); ideaLast = a.id;
     fillActivity(a);
     try { history.replaceState(null, "", "#activity-" + a.id); } catch (e) {}
-  } finally { ideaBusy = false; }
+  } finally { if (run === ideaRun) { ideaBusy = false; setThinking(false); } }
 }
 const copyLabel = document.getElementById("copy-label");
 let copyTimer = null;
