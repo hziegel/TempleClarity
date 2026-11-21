@@ -115,6 +115,16 @@ export const Q = {
   deleteProfile: `DELETE FROM user_profiles WHERE user_id = $1`,
   deleteUser: `DELETE FROM users WHERE id = $1`,          // also removes the supabase_users link
 
+  // ---- site events (login, click card, favorite, upvote, downvote) ---------------------------
+  // Looks the event up by its name in event_types. If the name isn't there, or the emotion given
+  // isn't a real one, nothing is inserted (rowCount 0).
+  eventInsert: `
+    INSERT INTO site_events (user_id, event_type_id, activity_id, emotion_id, created_at)
+    SELECT $1::int, et.id, $3::int, (SELECT e.id FROM emotions e WHERE lower(e.title) = lower($4::text)), now()
+    FROM event_types et
+    WHERE et.name = $2::text
+      AND ($4::text IS NULL OR EXISTS (SELECT 1 FROM emotions e WHERE lower(e.title) = lower($4::text)))`,
+
   // ---- error log --------------------------------------------------------------------------
   errorLogInsert: `
     INSERT INTO error_logs (level, source, message, context, stack, route, count, client_time)

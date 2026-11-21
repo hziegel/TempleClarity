@@ -630,8 +630,14 @@ function show(){
 var firstShow = true;
 addEventListener("hashchange", show);
 
+// Tells the server about a login or a card click so it can be counted. Never blocks or shows an error.
+function trackEvent(type, extra) {
+  if (!CONNECTED) return;
+  apiFetch("/api/events", { method: "POST", body: Object.assign({ type: type }, extra || {}) }).catch(() => {});
+}
 document.querySelectorAll(".emo").forEach(b => b.onclick = () => {
   chosenEmotion = b.title;
+  trackEvent("click card", { emotion: b.title });
   location.hash = "#time";
 });
 document.querySelectorAll(".pick").forEach(b => b.onclick = () => {
@@ -1205,6 +1211,7 @@ async function authRequest(mode, creds) {
   }
   const u = await finishSignIn();
   if (!u) throw new Error("Couldn’t finish signing you in. Try again.");
+  if (mode !== "signup") trackEvent("login");
   return u;
 }
 let finishing = null;

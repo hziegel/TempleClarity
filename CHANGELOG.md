@@ -7,6 +7,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 ### Added (CMS)
 - **Private Django admin (`cms/`)** for adding and editing activities from your own computer. It reads and writes the same Supabase database as the site and never creates or changes your tables (the models are `managed = False`). Add an activity with its description, time range in minutes, needs (group only, requires supplies), genre checkboxes and per-emotion weights; publish or unpublish one or many at once. Emotion names are saved in lowercase. Django's own login and session tables live in a local SQLite file, not in your Supabase `public` schema. Includes `fix_sequences` for the starter data's id counters and tests that check every model column against `backend/schema.sql`. Not part of the Docker image. Not yet run against a real Django install; see `cms/README.md`.
 
+### Added (site events)
+- **The backend now records five actions in `site_events`:** `login`, `click card`, `favorite`, `upvote` and `downvote`. Favorites and votes are recorded by the server when someone turns one on (not when they take it back off or repeat it). The page reports logins and emotion-card clicks to the new `POST /api/events`. A card click from someone who isn't logged in is stored with no user. Logging never blocks or fails what the person was doing. The five names must exist in `event_types`; run the insert script first. Deleting an account already removes that person's events.
+
 ### Removed (screen-only)
 - **The `screen_only` activity field is gone everywhere.** The column was dropped from the database, so the API no longer selects it and no longer returns `screenOnly`. It's also removed from `schema.sql`, the seed data, the add-activities template, the tests and the CMS model.
 

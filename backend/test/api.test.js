@@ -12,7 +12,7 @@ const ACTS = [
   { id: 4, title: "D", description: "d", min_minutes: 10, max_minutes: 30, genres: [], emotions: ["Calm"], scores: { Calm: 95 } }, // spans short and medium
 ];
 function makeDb() {
-  const st = { links: new Map(), users: new Map(), profiles: new Map(), mail: new Map(), subs: new Map(), favs: [], ups: [], downs: [], logs: [], nextId: 100 };
+  const st = { links: new Map(), users: new Map(), profiles: new Map(), mail: new Map(), subs: new Map(), favs: [], ups: [], downs: [], logs: [], events: [], nextId: 100 };
   const act = (a, emotion) => ({ ...a, group_only: false, requires_supplies: false, relevance: emotion ? a.scores[emotion] ?? null : null });
   const mine = (arr, uid, aid) => arr.some((r) => r.user_id === uid && r.activity_id === aid);
   const drop = (name, uid, aid) => { st[name] = st[name].filter((r) => !(r.user_id === uid && (aid == null || r.activity_id === aid))); };
@@ -60,6 +60,13 @@ function makeDb() {
       case Q.deleteEmailList: st.mail.delete(p[0]); return { rows: [] };
       case Q.deleteProfile: st.profiles.delete(p[0]); return { rows: [] };
       case Q.deleteUser: if (st.profiles.has(p[0])) throw new Error("foreign key: profile still points at this user"); st.users.delete(p[0]); for (const [k, v] of st.links) if (v === p[0]) st.links.delete(k); return { rows: [] };
+      case Q.eventInsert: {
+        const [user, name, activity, emotion] = p;
+        if (!["login", "click card", "favorite", "upvote", "downvote"].includes(name)) return { rows: [], rowCount: 0 };
+        if (emotion != null && !["happy", "sad", "mad", "scared", "bored", "tired", "nervous", "calm"].includes(emotion.toLowerCase())) return { rows: [], rowCount: 0 };
+        st.events.push({ user, name, activity, emotion: emotion == null ? null : emotion.toLowerCase() });
+        return { rows: [], rowCount: 1 };
+      }
       case Q.errorLogInsert: st.logs.push(p); return { rows: [] };
       default: throw new Error("unknown query: " + sql);
     }
@@ -298,4 +305,45 @@ test("config.js gives the browser the public settings only", async () => {
   const cfg = new Function("window", body + "; return window.TC_CONFIG;")({});
   assert.deepEqual(cfg, { apiBase: "", supabaseUrl: "https://abc.supabase.co", supabaseAnonKey: "sb_publishable_test" });
   assert.ok(!body.includes("SECRET") && !body.includes("postgres"), "no secrets in config.js");
+});
+
+test("events: favorites and votes are recorded by the server, only when turned on", async () => {
+  db.st.events.length = 0;
+  const put = (body) => call("PUT", "/api/reactions/1", { token: "good-token", body });
+  await put({ fav: true });
+  await put({ fav: true });                    // already a favorite: not a new event
+  await put({ vote: "up" });
+  await put({ vote: "down" });                 // switching sides is a new downvote
+  await put({ vote: null });                   // taking a vote back is no event
+  await put({ fav: false });                   // neither is un-favoriting
+  assert.deepEqual(db.st.events.map((e) => e.name), ["favorite", "upvote", "downvote"]);
+  assert.ok(db.st.events.every((e) => e.activity === 1 && e.user != null));
+});
+
+test("events: a login needs a sign-in, a card click works with or without one", async () => {
+  db.st.events.length = 0;
+  assert.equal((await call("POST", "/api/events", { body: { type: "login" } })).status, 401);
+  assert.equal((await call("POST", "/api/events", { token: "good-token", body: { type: "login" } })).status, 204);
+  assert.equal((await call("POST", "/api/events", { body: { type: "click card", emotion: "Calm" } })).status, 204);
+  assert.equal((await call("POST", "/api/events", { token: "good-token", body: { type: "click card", emotion: "sad" } })).status, 204);
+  assert.equal((await call("POST", "/api/events", { token: "bad-token", body: { type: "click card", emotion: "mad" } })).status, 204);
+  const [login, anon, named, badToken] = db.st.events;
+  assert.deepEqual([login.name, login.user != null, login.emotion], ["login", true, null]);
+  assert.deepEqual([anon.name, anon.user, anon.emotion], ["click card", null, "calm"]);
+  assert.deepEqual([named.name, named.user != null, named.emotion], ["click card", true, "sad"]);
+  assert.deepEqual([badToken.user, badToken.emotion], [null, "mad"]);
+});
+
+test("events: the page cannot report favorites or votes, and bad input is refused", async () => {
+  db.st.events.length = 0;
+  for (const body of [{ type: "favorite" }, { type: "upvote" }, { type: "downvote" }, { type: "nope" }, {}, { type: "click card" }, { type: "click card", emotion: "x".repeat(31) }]) {
+    assert.equal((await call("POST", "/api/events", { token: "good-token", body })).status, 400, JSON.stringify(body));
+  }
+  assert.equal(db.st.events.length, 0);
+});
+
+test("events: an unknown emotion is not recorded but the page is not told off", async () => {
+  db.st.events.length = 0;
+  assert.equal((await call("POST", "/api/events", { body: { type: "click card", emotion: "Sleepy" } })).status, 204);
+  assert.equal(db.st.events.length, 0);
 });

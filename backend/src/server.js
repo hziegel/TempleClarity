@@ -130,6 +130,14 @@ export function createServer({ db, supabase, config }) {
     return n;
   };
 
+  // Records one row in site_events. Never throws: a logging problem must not break what the person did.
+  async function logEvent(name, { userId = null, activityId = null, emotion = null } = {}) {
+    try {
+      const r = await db.query(Q.eventInsert, [userId, name, activityId, emotion]);
+      if (r && r.rowCount === 0) console.warn(`[events] nothing recorded for "${name}": is it in event_types?`);
+    } catch (e) { console.error("[events] insert failed:", e.message); }
+  }
+
   const routes = [];
   const route = (method, pattern, handler) => routes.push({ method, re: new RegExp(`^${pattern}$`), handler });
 
@@ -233,6 +241,7 @@ export function createServer({ db, supabase, config }) {
     const result = await db.tx(async (q) => {
       await q(Q.lockUser, [user.localId]);               // this person's changes happen one at a time
       const ids = [user.localId, activityId];
+      const before = (await q(Q.reactionState, ids)).rows[0];
       if (hasFav) await q(body.fav ? Q.favInsert : Q.favDelete, ids);
       if (hasVote) {
         await q(Q.upDelete, ids); await q(Q.downDelete, ids);   // a person has one vote per activity
@@ -240,9 +249,35 @@ export function createServer({ db, supabase, config }) {
         if (body.vote === "down") await q(Q.downInsert, ids);
       }
       const st = (await q(Q.reactionState, ids)).rows[0];
-      return { fav: !!st.fav, vote: st.vote || null };
+      // Only turning something on is an event; taking it back off, or repeating it, is not.
+      const events = [];
+      if (hasFav && body.fav && !before.fav) events.push("favorite");
+      if (hasVote && body.vote === "up" && before.vote !== "up") events.push("upvote");
+      if (hasVote && body.vote === "down" && before.vote !== "down") events.push("downvote");
+      return { fav: !!st.fav, vote: st.vote || null, events };
     });
-    return { status: 200, body: { reaction: result } };
+    for (const name of result.events) await logEvent(name, { userId: user.localId, activityId });
+    return { status: 200, body: { reaction: { fav: result.fav, vote: result.vote } } };
+  });
+
+  // The page reports the two things only it can see: a login and a click on an emotion card.
+  // Favorites and votes are recorded by the server itself (see /api/reactions), so they are refused here.
+  route("POST", "/api/events", async ({ req, ip }) => {
+    limit(`ev:${ip}`, 120, 60_000);
+    const b = await readJson(req);
+    if (b.type === "login") {
+      const user = await requireLocalUser(req);
+      await logEvent("login", { userId: user.localId });
+      return { status: 204 };
+    }
+    if (b.type === "click card") {
+      if (typeof b.emotion !== "string" || !b.emotion.trim() || b.emotion.length > 30) throw new ApiError(400, "Send the emotion that was chosen.");
+      let userId = null;                                   // works without an account; then no one is named
+      try { userId = (await requireLocalUser(req)).localId; } catch { /* not signed in */ }
+      await logEvent("click card", { userId, emotion: b.emotion.trim() });
+      return { status: 204 };
+    }
+    throw new ApiError(400, 'type must be "login" or "click card".');
   });
 
   route("POST", "/api/terms-acceptance", async ({ req }) => {

@@ -89,6 +89,7 @@ If the page is hosted somewhere else (a plain static host), copy `config.example
 | GET / PUT | `/api/profile` | yes | `{ backgroundArt, musicOn, country }`. PUT changes only the fields you send. |
 | GET | `/api/reactions` | yes | `{ "reactions": { "<activityId>": { fav, vote } } }`. |
 | PUT | `/api/reactions/:activityId` | yes | Body `{ fav?: boolean, vote?: "up" \| "down" \| null }`. Only the fields you send change. |
+| POST | `/api/events` | login: yes; click card: optional | Body `{ type: "login" }` or `{ type: "click card", emotion: "Calm" }`. Adds a row to `site_events`. A card click without a login is stored with no user. `favorite`, `upvote` and `downvote` are refused here; `PUT /api/reactions` records them itself, only when they are turned on. The event name must exist in `event_types` (it is looked up by name), or nothing is stored and a warning is logged. |
 | POST | `/api/terms-acceptance` | yes | Body `{ version: "2026-11-11" }`. Saves it to `users.terms_accepted` and `terms_version`. |
 | DELETE | `/api/account` | yes | Body `{ password }`. Checks the password with Supabase, deletes the person's rows from every table, then deletes the Supabase user. |
 | POST | `/api/log` | no | Receives the front end's error log (array of entries). Capped at 20 entries and 20 KB per request, rate limited. |
