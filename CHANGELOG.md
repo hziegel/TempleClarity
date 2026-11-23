@@ -4,6 +4,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Changed (long suggestions)
+- **Long suggestions scroll inside the box.** The result box has a height cap based on the window size and a thin scrollbar (keyboard-focusable), so oversized text no longer pushes the page up into the logo. The activity page also gets extra top padding so the heading always clears the logo. On very short windows the whole page can still scroll.
+
 ### Added (CMS)
 - **Private Django admin (`cms/`)** for adding and editing activities from your own computer. It reads and writes the same Supabase database as the site and never creates or changes your tables (the models are `managed = False`). Add an activity with its description, time range in minutes, needs (group only, requires supplies), genre checkboxes and per-emotion weights; publish or unpublish one or many at once. Emotion names are saved in lowercase. Django's own login and session tables live in a local SQLite file, not in your Supabase `public` schema. Includes `fix_sequences` for the starter data's id counters and tests that check every model column against `backend/schema.sql`. Not part of the Docker image. Not yet run against a real Django install; see `cms/README.md`.
 
