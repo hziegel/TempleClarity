@@ -7,6 +7,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 ### Added (CMS)
 - **Private Django admin (`cms/`)** for adding and editing activities from your own computer. It reads and writes the same Supabase database as the site and never creates or changes your tables (the models are `managed = False`). Add an activity with its description, time range in minutes, needs (group only, requires supplies), genre checkboxes and per-emotion weights; publish or unpublish one or many at once. Emotion names are saved in lowercase. Django's own login and session tables live in a local SQLite file, not in your Supabase `public` schema. Includes `fix_sequences` for the starter data's id counters and tests that check every model column against `backend/schema.sql`. Not part of the Docker image. Not yet run against a real Django install; see `cms/README.md`.
 
+### Added (profile settings)
+- **The profile page has a Settings section** (gear icon, opens like Favorites and Upvotes) with a "Delete my account" button. It uses the same confirmation as before: a warning, then your password, then "Permanently delete". The button moved here from the "You're logged in" page, so it appears in one place.
+
 ### Added (contemplating delay)
 - **Each suggestion now appears after a short "contemplating . . ." pause.** The wait is a random 2 to 5 seconds, on the first suggestion and on every "Try another". The message is in Impact (with bold sans-serif fallbacks on devices without it), and its three dots take turns lifting and brightening. While it shows, the "Try this" heading, the "Feeling ..." line, the activity box, the buttons and the reaction icons are hidden. The suggestion is fetched during the wait. If you leave the page or choose again during the wait, the old answer is dropped. Opening a shared `#activity-N` link still shows the activity straight away.
 

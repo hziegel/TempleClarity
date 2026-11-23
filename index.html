@@ -369,18 +369,6 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
       <label class="agree" id="mail-pref-wrap" hidden><input type="checkbox" id="mail-pref"> <span>Email me occasional updates about Temple Clarity</span></label>
       <p class="auth-msg" id="mail-pref-msg" role="status"></p>
       <button class="btn" id="logout-btn" type="button">Log out</button>
-      <div class="delacct">
-        <button class="linkbtn" id="del-open" type="button" aria-expanded="false" aria-controls="del-panel">Delete my account</button>
-        <div class="delpanel" id="del-panel" role="group" aria-labelledby="del-h" hidden>
-          <h2 id="del-h">Delete your account?</h2>
-          <p>This permanently deletes your account and your saved favorites, upvotes and downvotes. It can’t be undone.</p>
-          <label for="del-pass">Enter your password to confirm</label>
-          <input class="field" id="del-pass" type="password" autocomplete="current-password" aria-describedby="del-msg">
-          <p class="auth-msg" id="del-msg" role="alert"></p>
-          <button class="btn" id="del-confirm" type="button">Permanently delete</button>
-          <button class="btn" id="del-cancel" type="button">Cancel</button>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -400,6 +388,21 @@ body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:45vh;pointe
       <summary><span class="pf-title"><svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='#cefbf4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17'/></svg>Downvotes</span><span class="pf-count" id="pf-down-count"></span><svg class='chev' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='#cefbf4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M6 9l6 6 6-6'/></svg></summary>
       <div class="results" id="pf-down"></div>
       <p class="profile-empty" id="pf-down-empty">Nothing here yet. Tap the thumbs down on an activity that wasn&rsquo;t for you.</p>
+    </details>
+    <details class="profile-sec" id="pf-settings">
+      <summary><span class="pf-title"><svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='#cefbf4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z'/></svg>Settings</span><svg class='chev' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='#cefbf4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M6 9l6 6 6-6'/></svg></summary>
+      <div class="delacct">
+        <button class="btn" id="del-open" type="button" aria-expanded="false" aria-controls="del-panel">Delete my account</button>
+        <div class="delpanel" id="del-panel" role="group" aria-labelledby="del-h" hidden>
+          <h2 id="del-h">Delete your account?</h2>
+          <p>This permanently deletes your account and your saved favorites, upvotes and downvotes. It can’t be undone.</p>
+          <label for="del-pass">Enter your password to confirm</label>
+          <input class="field" id="del-pass" type="password" autocomplete="current-password" aria-describedby="del-msg">
+          <p class="auth-msg" id="del-msg" role="alert"></p>
+          <button class="btn" id="del-confirm" type="button">Permanently delete</button>
+          <button class="btn" id="del-cancel" type="button">Cancel</button>
+        </div>
+      </div>
     </details>
   </section>
 
@@ -1196,6 +1199,7 @@ function pfBuildRow(k, a) {
 }
 function renderProfile() {
   document.querySelectorAll("details.profile-sec").forEach(d => { d.open = false; });
+  try { closeDelete(false); } catch (e) { /* the delete panel isn't set up yet */ }
   const lists = { fav: [], up: [], down: [] };
   ACTIVITIES.forEach(a => {
     const r = reactions[a.id] || {};
