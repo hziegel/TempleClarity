@@ -4,6 +4,9 @@ All notable changes to Temple Clarity. Format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Changed (Try another)
+- **"Try another" no longer shows the "contemplating . . ." pause.** The next suggestion swaps in as soon as it is fetched. The pause still appears after choosing an emotion and time.
+
 ### Changed (long suggestions)
 - **Long suggestions scroll inside the box.** The result box has a height cap based on the window size and a thin scrollbar (keyboard-focusable), so oversized text no longer pushes the page up into the logo. The activity page also gets extra top padding so the heading always clears the logo. On very short windows the whole page can still scroll.
 

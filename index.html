@@ -814,9 +814,9 @@ function setThinking(on) {
   document.getElementById("m-idea").classList.toggle("thinking", on);
   document.getElementById("contemplating").hidden = !on;
 }
-// Every suggestion appears after a "contemplating . . ." pause of 2 to 5 seconds. The answer is fetched
+// Every suggestion except "Try another" appears after a "contemplating . . ." pause of 2 to 5 seconds. The answer is fetched
 // while the pause runs, so it is ready when the pause ends.
-async function renderIdea(reset) {
+async function renderIdea(reset, instant) {
   if (reset) { seenIdeas = []; ideaQueue = []; ideaLast = null; ideaRun++; }
   else if (ideaBusy) return;
   const run = ideaRun, startHash = location.hash;
@@ -824,8 +824,8 @@ async function renderIdea(reset) {
   try {
     const flow = !!(chosenEmotion && chosenTime);
     setContext(flow ? "Feeling " + chosenEmotion.toLowerCase() + ", with " + chosenTimeLabel + "." : "");
-    setThinking(true);
-    const began = Date.now(), wait = 2000 + Math.random() * 3000;
+    if (!instant) setThinking(true);
+    const began = Date.now(), wait = instant ? 0 : 2000 + Math.random() * 3000;
     const a = await nextFromQueue(flow ? chosenEmotion : null, flow ? chosenTime : null);
     const rest = wait - (Date.now() - began);
     if (rest > 0) await new Promise(r => setTimeout(r, rest));
@@ -856,7 +856,7 @@ document.getElementById("copy").onclick = async () => {
   clearTimeout(copyTimer);
   copyTimer = setTimeout(() => { copyLabel.textContent = "Copy link"; }, 2000);
 };
-document.getElementById("another").onclick = () => renderIdea(false);
+document.getElementById("another").onclick = () => renderIdea(false, true);   // "Try another" skips the contemplating pause
 const voidEl = document.getElementById("void"), sendBtn = document.getElementById("send");
 function syncSend(){ sendBtn.disabled = voidEl.readOnly || !voidEl.value.trim(); }
 voidEl.addEventListener("input", syncSend); syncSend();
